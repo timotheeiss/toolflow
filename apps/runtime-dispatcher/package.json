@@ -19,7 +19,7 @@
     "@toolflow/database": "workspace:*",
     "@toolflow/object-store": "workspace:*",
     "@toolflow/runtime-context": "workspace:*",
-    "@workos-inc/node": "10.9.0",
+    "@workos-inc/node": "10.10.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.9.6",
     "zod": "^3.25.76"
