@@ -4,7 +4,8 @@ import { createDeploymentApplication } from "../../deployment-worker/src/bootstr
 import { createMcpApplication } from "../../mcp/src/bootstrap.js";
 import { createRuntimeDispatcherApplication } from "../../runtime-dispatcher/src/bootstrap.js";
 
-export const maxDuration = 240;
+// Vercel Hobby permits functions to run for at most 60 seconds.
+export const maxDuration = 60;
 
 const services = {
   "api.toolflow.space": createControlApiApplication().app,

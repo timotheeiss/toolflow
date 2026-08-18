@@ -1,3 +1,5 @@
 {
-  "functions": { "api/[[...path]].ts": { "maxDuration": 240, "memory": 2048 } }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["cdg1"],
+  "functions": { "api/[[...path]].ts": { "maxDuration": 60 } }
 }

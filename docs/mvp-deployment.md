@@ -27,7 +27,7 @@ TOOLFLOW_BUILD_SERVICE_URL=https://build.toolflow.space
 TOOLFLOW_BUILD_EXECUTION=external
 ```
 
-The build project receives only `DATABASE_URL`, the R2 credentials, `TOOLFLOW_BUILD_SERVICE_TOKEN`, `TOOLFLOW_BUILD_TIMEOUT_MS=220000`, and `TOOLFLOW_BUILD_MAX_ARTIFACT_BYTES`. Never add WorkOS, Cloudflare, runtime-context, deployment, or gateway secrets to it.
+The build project receives only `DATABASE_URL`, the R2 credentials, `TOOLFLOW_BUILD_SERVICE_TOKEN`, `TOOLFLOW_BUILD_TIMEOUT_MS=50000`, and `TOOLFLOW_BUILD_MAX_ARTIFACT_BYTES`. Never add WorkOS, Cloudflare, runtime-context, deployment, or gateway secrets to it. Vercel Hobby functions have a 60-second ceiling, so the build timeout deliberately leaves time for setup and cleanup. Upgrade to Vercel Pro before raising this limit.
 
 ## First deployment
 
