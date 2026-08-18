@@ -1,0 +1,1 @@
+ALTER TABLE "approval_requests" ADD COLUMN "change_summary" jsonb DEFAULT '{}'::jsonb NOT NULL;

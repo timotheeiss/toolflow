@@ -1,0 +1,32 @@
+{
+  "name": "@toolflow/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src drizzle.config.ts",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts",
+    "bootstrap:pilot": "tsx src/bootstrap-pilot.ts"
+  },
+  "dependencies": {
+    "@toolflow/contracts": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.5",
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.20.4",
+    "vitest": "^3.2.4"
+  }
+}

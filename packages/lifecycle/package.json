@@ -1,0 +1,33 @@
+{
+  "name": "@toolflow/lifecycle",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@toolflow/app-data": "workspace:*",
+    "@toolflow/auth": "workspace:*",
+    "@toolflow/build-system": "workspace:*",
+    "@toolflow/contracts": "workspace:*",
+    "@toolflow/database": "workspace:*",
+    "@toolflow/object-store": "workspace:*",
+    "@toolflow/policy": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.5",
+    "vitest": "^3.2.4"
+  }
+}

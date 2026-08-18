@@ -1,0 +1,39 @@
+{
+  "name": "@toolflow/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.1",
+    "@modelcontextprotocol/node": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
+    "@toolflow/app-data": "workspace:*",
+    "@toolflow/app-template": "workspace:*",
+    "@toolflow/audit": "workspace:*",
+    "@toolflow/auth": "workspace:*",
+    "@toolflow/build-system": "workspace:*",
+    "@toolflow/contracts": "workspace:*",
+    "@toolflow/database": "workspace:*",
+    "@toolflow/lifecycle": "workspace:*",
+    "@toolflow/object-store": "workspace:*",
+    "@toolflow/observability": "workspace:*",
+    "@toolflow/policy": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.9.6",
+    "pg": "^8.16.3",
+    "zod": "^4.2.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
+    "@types/pg": "^8.15.5",
+    "tsx": "^4.20.4",
+    "vitest": "^3.2.4"
+  }
+}

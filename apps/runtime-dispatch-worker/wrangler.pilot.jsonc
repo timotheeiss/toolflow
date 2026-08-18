@@ -1,0 +1,24 @@
+{
+  "name": "toolflow-runtime-dispatch",
+  "main": "dist/index.js",
+  "compatibility_date": "2026-08-01",
+  "workers_dev": false,
+  "routes": [{ "pattern": "*.apps.toolflow.space/*", "zone_name": "toolflow.space" }],
+  "dispatch_namespaces": [{
+    "binding": "TOOLFLOW_USER_WORKERS",
+    "namespace": "toolflow-production",
+    "outbound": {
+      "service": "toolflow-runtime-outbound",
+      "parameters": ["TOOLFLOW_DATA_GATEWAY_ORIGIN", "TOOLFLOW_RUNTIME_CONTEXT_TOKEN", "TOOLFLOW_DISPATCH_CONTEXT"]
+    }
+  }],
+  "vars": {
+    "TOOLFLOW_AUTHORIZATION_ORIGIN": "https://runtime-auth.toolflow.space",
+    "TOOLFLOW_APP_BASE_HOST": "apps.toolflow.space",
+    "TOOLFLOW_DATA_GATEWAY_ORIGIN": "https://data.toolflow.space",
+    "TOOLFLOW_RUNTIME_CPU_MS": "50",
+    "TOOLFLOW_RUNTIME_SUBREQUESTS": "10",
+    "TOOLFLOW_RUNTIME_MAX_RESPONSE_BYTES": "8388608",
+    "TOOLFLOW_RUNTIME_MAX_DURATION_MS": "30000"
+  }
+}

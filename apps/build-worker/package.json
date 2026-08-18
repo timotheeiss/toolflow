@@ -1,0 +1,23 @@
+{
+  "name": "@toolflow/build-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@toolflow/build-system": "workspace:*",
+    "@toolflow/database": "workspace:*",
+    "@toolflow/object-store": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.4",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "toolflow-runtime-dispatch",
+  "main": "dist/index.js",
+  "compatibility_date": "2026-08-01",
+  "dispatch_namespaces": [
+    {
+      "binding": "TOOLFLOW_USER_WORKERS",
+      "namespace": "toolflow-production",
+      "outbound": {
+        "service": "toolflow-runtime-outbound",
+        "parameters": [
+          "TOOLFLOW_DATA_GATEWAY_ORIGIN",
+          "TOOLFLOW_RUNTIME_CONTEXT_TOKEN",
+          "TOOLFLOW_DISPATCH_CONTEXT",
+        ],
+      },
+    },
+  ],
+  "ratelimits": [
+    {
+      "name": "TOOLFLOW_RUNTIME_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 600,
+        "period": 60,
+      },
+    },
+  ],
+  "vars": {
+    "TOOLFLOW_AUTHORIZATION_ORIGIN": "https://runtime-auth.toolflow.example",
+    "TOOLFLOW_AUTHORIZATION_SERVICE_TOKEN": "set-with-wrangler-secret",
+    "TOOLFLOW_APP_BASE_HOST": "apps.toolflow.example",
+    "TOOLFLOW_DATA_GATEWAY_ORIGIN": "https://data.toolflow.example",
+    "TOOLFLOW_HEALTH_SERVICE_TOKEN": "set-with-wrangler-secret",
+    "TOOLFLOW_RUNTIME_CPU_MS": "50",
+    "TOOLFLOW_RUNTIME_SUBREQUESTS": "10",
+    "TOOLFLOW_RUNTIME_MAX_RESPONSE_BYTES": "8388608",
+    "TOOLFLOW_RUNTIME_MAX_DURATION_MS": "30000",
+  },
+}

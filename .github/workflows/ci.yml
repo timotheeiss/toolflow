@@ -1,0 +1,56 @@
+name: Toolflow verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: toolflow
+          POSTGRES_PASSWORD: toolflow
+          POSTGRES_DB: toolflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U toolflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://toolflow:toolflow@127.0.0.1:5432/toolflow
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm db:migrate
+      - run: pnpm test:integration
+      - run: pnpm db:seed
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run browser end-to-end suite
+        run: pnpm test:e2e
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: output/playwright
+          if-no-files-found: ignore
+      - name: Reject high or critical dependency vulnerabilities
+        run: pnpm audit --audit-level high

@@ -1,0 +1,31 @@
+{
+  "name": "@toolflow/runtime-dispatcher",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.1",
+    "@toolflow/audit": "workspace:*",
+    "@toolflow/auth": "workspace:*",
+    "@toolflow/build-system": "workspace:*",
+    "@toolflow/contracts": "workspace:*",
+    "@toolflow/database": "workspace:*",
+    "@toolflow/object-store": "workspace:*",
+    "@toolflow/runtime-context": "workspace:*",
+    "@workos-inc/node": "10.9.0",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.9.6",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.4",
+    "vitest": "^3.2.4"
+  }
+}

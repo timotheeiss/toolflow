@@ -1,0 +1,3 @@
+{
+  "functions": { "api/[[...path]].ts": { "maxDuration": 240, "memory": 2048 } }
+}

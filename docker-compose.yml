@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: toolflow
+      POSTGRES_USER: toolflow
+      POSTGRES_PASSWORD: toolflow
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U toolflow -d toolflow"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    volumes:
+      - toolflow-postgres:/var/lib/postgresql/data
+
+volumes:
+  toolflow-postgres:

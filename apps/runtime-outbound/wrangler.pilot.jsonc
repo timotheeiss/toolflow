@@ -1,0 +1,6 @@
+{
+  "name": "toolflow-runtime-outbound",
+  "main": "dist/index.js",
+  "compatibility_date": "2026-08-01",
+  "workers_dev": false
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@toolflow/vercel-api",
+  "private": true,
+  "type": "module",
+  "scripts": { "lint": "eslint api", "typecheck": "tsc -p tsconfig.json --noEmit" }
+}
