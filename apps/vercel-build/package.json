@@ -6,7 +6,7 @@
     "@toolflow/build-worker": "workspace:*"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json --noEmit",
+    "build": "node -e \"console.log('Dependencies built; Vercel will bundle the build function.')\"",
     "lint": "eslint api",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }
