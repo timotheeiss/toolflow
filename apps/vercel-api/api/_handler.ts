@@ -18,5 +18,13 @@ const services = {
 export default async function handler(request: Request): Promise<Response> {
   const host = new URL(request.url).hostname.toLowerCase();
   const service = services[host as keyof typeof services];
-  return service ? await service.fetch(request) : new Response("Unknown Toolflow service.", { status: 404 });
+  if (!service) return new Response("Unknown Toolflow service.", { status: 404 });
+
+  // Public service URLs do not include Vercel's internal /api route. The rewrite
+  // below adds it only to select the function, so remove it before Hono matches
+  // the request path.
+  const url = new URL(request.url);
+  if (url.pathname === "/api") url.pathname = "/";
+  else if (url.pathname.startsWith("/api/")) url.pathname = url.pathname.slice(4);
+  return service.fetch(new Request(url, request));
 }

@@ -5,5 +5,8 @@ export const maxDuration = 60;
 const app = createBuildRunnerApplication().app;
 
 export default function handler(request: Request): Promise<Response> {
-  return app.fetch(request);
+  const url = new URL(request.url);
+  if (url.pathname === "/api") url.pathname = "/";
+  else if (url.pathname.startsWith("/api/")) url.pathname = url.pathname.slice(4);
+  return app.fetch(new Request(url, request));
 }
