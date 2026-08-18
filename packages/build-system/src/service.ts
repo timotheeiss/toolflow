@@ -16,7 +16,7 @@ export interface BuildServiceOptions {
 export class BuildService {
   private readonly worker: BuildWorker;
   private readonly execution: "inline" | "external";
-  private readonly runner?: { url: string; token: string };
+  private readonly runner: { url: string; token: string } | undefined;
   private readonly pollIntervalMs: number;
   private readonly timeoutMs: number;
 

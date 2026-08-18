@@ -2,6 +2,13 @@
   "name": "@toolflow/vercel-api",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "@toolflow/control-api": "workspace:*",
+    "@toolflow/data-gateway": "workspace:*",
+    "@toolflow/deployment-worker": "workspace:*",
+    "@toolflow/mcp": "workspace:*",
+    "@toolflow/runtime-dispatcher": "workspace:*"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint api",

@@ -2,6 +2,9 @@
   "name": "@toolflow/vercel-build",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "@toolflow/build-worker": "workspace:*"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint api",

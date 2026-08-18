@@ -349,9 +349,29 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(tsx@4.23.12)
 
-  apps/vercel-api: {}
+  apps/vercel-api:
+    dependencies:
+      '@toolflow/control-api':
+        specifier: workspace:*
+        version: link:../control-api
+      '@toolflow/data-gateway':
+        specifier: workspace:*
+        version: link:../data-gateway
+      '@toolflow/deployment-worker':
+        specifier: workspace:*
+        version: link:../deployment-worker
+      '@toolflow/mcp':
+        specifier: workspace:*
+        version: link:../mcp
+      '@toolflow/runtime-dispatcher':
+        specifier: workspace:*
+        version: link:../runtime-dispatcher
 
-  apps/vercel-build: {}
+  apps/vercel-build:
+    dependencies:
+      '@toolflow/build-worker':
+        specifier: workspace:*
+        version: link:../build-worker
 
   packages/app-data:
     dependencies:
