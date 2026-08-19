@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { build, type BuildFailure, type Message } from "esbuild";
 import {
@@ -51,7 +51,25 @@ const allowedPackages = new Set([
   "hono",
   "vitest",
 ]);
-const runtimeNodeModules = fileURLToPath(new URL("../node_modules", import.meta.url));
+const runtimeRequire = createRequire(import.meta.url);
+const runtimePackages = [
+  "@toolflow/app-sdk",
+  "@toolflow/components",
+  "@types/react",
+  "@types/react-dom",
+  "hono",
+  "react",
+  "react-dom",
+  "typescript",
+  "vitest",
+] as const;
+// Resolve every package independently. Serverless providers trace and relocate
+// application files, so inferring one shared node_modules directory from the
+// compiler's source path (or from pnpm's realpath) is not reliable.
+const runtimePackageRoots = new Map(
+  runtimePackages.map((name) => [name, resolveRuntimePackageRoot(name)]),
+);
+const vitestCli = runtimeRequire.resolve("vitest/vitest.mjs");
 const execFileAsync = promisify(execFile);
 
 export async function compileSource(
@@ -93,7 +111,7 @@ export async function compileSource(
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, file.content, { encoding: "utf8", mode: 0o600 });
     }
-    await symlink(runtimeNodeModules, join(directory, "node_modules"), "dir");
+    await linkRuntimePackages(directory);
     const typeDiagnostics = typecheckSource(bundle, directory);
     if (typeDiagnostics.length) {
       return { artifact: null, artifactHash: null, diagnostics: typeDiagnostics };
@@ -125,7 +143,7 @@ export async function compileSource(
         entryNames: "artifact",
         outdir: join(directory, "dist"),
         conditions: ["browser", "import", "default"],
-        nodePaths: [runtimeNodeModules, join(process.cwd(), "node_modules")],
+        nodePaths: [join(directory, "node_modules")],
       }),
       build({
         entryPoints: [join(directory, "src/server.ts")],
@@ -141,7 +159,7 @@ export async function compileSource(
         logLevel: "silent",
         external: ["node:*"],
         conditions: ["import", "default"],
-        nodePaths: [runtimeNodeModules, join(process.cwd(), "node_modules")],
+        nodePaths: [join(directory, "node_modules")],
       }),
     ]);
     const js = browser.outputFiles.find((file) => file.path.endsWith(".js"))?.text ?? "";
@@ -194,8 +212,12 @@ function typecheckSource(bundle: SourceBundle, directory: string): BuildDiagnost
     skipLibCheck: true,
     baseUrl: directory,
     paths: {
-      "@toolflow/app-sdk": [join(runtimeNodeModules, "@toolflow/app-sdk/dist/index.d.ts")],
-      "@toolflow/components": [join(runtimeNodeModules, "@toolflow/components/dist/index.d.ts")],
+      "@toolflow/app-sdk": [
+        join(directory, "node_modules", "@toolflow", "app-sdk", "dist", "index.d.ts"),
+      ],
+      "@toolflow/components": [
+        join(directory, "node_modules", "@toolflow", "components", "dist", "index.d.ts"),
+      ],
     },
   };
   return ts
@@ -217,12 +239,29 @@ function typecheckSource(bundle: SourceBundle, directory: string): BuildDiagnost
     });
 }
 
+function resolveRuntimePackageRoot(packageName: (typeof runtimePackages)[number]): string {
+  try {
+    return dirname(runtimeRequire.resolve(`${packageName}/package.json`));
+  } catch {
+    // Toolflow packages intentionally hide package.json behind their export map.
+    return dirname(dirname(runtimeRequire.resolve(packageName)));
+  }
+}
+
+async function linkRuntimePackages(directory: string): Promise<void> {
+  for (const [packageName, source] of runtimePackageRoots) {
+    const destination = join(directory, "node_modules", packageName);
+    await mkdir(dirname(destination), { recursive: true });
+    await symlink(source, destination, "dir");
+  }
+}
+
 async function runUnitTests(directory: string): Promise<BuildDiagnostic[]> {
   try {
     await execFileAsync(
       process.execPath,
       [
-        join(runtimeNodeModules, "vitest/vitest.mjs"),
+        vitestCli,
         "run",
         "--passWithNoTests",
         "--maxWorkers=1",

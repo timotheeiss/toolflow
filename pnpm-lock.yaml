@@ -475,6 +475,12 @@ importers:
       '@toolflow/object-store':
         specifier: workspace:*
         version: link:../object-store
+      '@types/react':
+        specifier: ^19.1.11
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.1.7
+        version: 19.2.4(@types/react@19.2.18)
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@types/pg@8.21.0)(pg@8.23.0)
@@ -493,13 +499,6 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
-    devDependencies:
-      '@types/react':
-        specifier: ^19.1.11
-        version: 19.2.18
-      '@types/react-dom':
-        specifier: ^19.1.7
-        version: 19.2.4(@types/react@19.2.18)
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(tsx@4.23.12)
