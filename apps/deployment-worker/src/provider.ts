@@ -11,6 +11,21 @@ export interface DeploymentProvider {
   publish(input: ProviderPublishInput): Promise<{ providerDeploymentId: string }>;
 }
 
+export class DeploymentProviderError extends Error {
+  constructor(
+    readonly code:
+      | "CLOUDFLARE_UPLOAD_FAILED"
+      | "CLOUDFLARE_STARTUP_VALIDATION_FAILED"
+      | "RUNTIME_HEALTH_REQUEST_FAILED"
+      | "RUNTIME_HEALTH_CHECK_FAILED",
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "DeploymentProviderError";
+  }
+}
+
 export class LocalDeploymentProvider implements DeploymentProvider {
   publish(input: ProviderPublishInput): Promise<{ providerDeploymentId: string }> {
     return Promise.resolve({
@@ -50,50 +65,82 @@ export class CloudflareDeploymentProvider implements DeploymentProvider {
       "user-server.js",
     );
     const namespace = this.namespaces[input.environment];
-    const response = await fetch(
-      `${this.apiBaseUrl}/accounts/${encodeURIComponent(this.accountId)}/workers/dispatch/namespaces/${encodeURIComponent(namespace)}/scripts/${encodeURIComponent(scriptName)}`,
-      {
-        method: "PUT",
-        headers: { authorization: `Bearer ${this.apiToken}` },
-        body,
-        signal: AbortSignal.timeout(4 * 60 * 1_000),
-      },
-    );
-    const payload = (await response.json()) as {
+    let response: Response;
+    try {
+      response = await fetch(
+        `${this.apiBaseUrl}/accounts/${encodeURIComponent(this.accountId)}/workers/dispatch/namespaces/${encodeURIComponent(namespace)}/scripts/${encodeURIComponent(scriptName)}`,
+        {
+          method: "PUT",
+          headers: { authorization: `Bearer ${this.apiToken}` },
+          body,
+          signal: AbortSignal.timeout(4 * 60 * 1_000),
+        },
+      );
+    } catch (error) {
+      throw new DeploymentProviderError(
+        "CLOUDFLARE_UPLOAD_FAILED",
+        "Cloudflare publication request failed.",
+        { cause: error },
+      );
+    }
+    const payload = (await response.json().catch(() => ({}))) as {
       success?: boolean;
       result?: { id?: string; startup_time_ms?: number };
       errors?: Array<{ code?: number; message?: string }>;
     };
     if (!response.ok || payload.success !== true) {
-      const message = payload.errors
-        ?.map((error) => error.message)
-        .filter(Boolean)
-        .join("; ");
-      throw new Error(message || `Cloudflare publication failed with status ${response.status}.`);
+      const errorCodes = payload.errors
+        ?.map((error) => error.code)
+        .filter((code): code is number => typeof code === "number");
+      throw new DeploymentProviderError(
+        "CLOUDFLARE_UPLOAD_FAILED",
+        `Cloudflare rejected publication with status ${response.status}${errorCodes?.length ? ` (errors: ${errorCodes.join(", ")})` : ""}.`,
+      );
     }
     if (typeof payload.result?.startup_time_ms !== "number") {
-      throw new Error("Cloudflare did not return module startup validation.");
+      throw new DeploymentProviderError(
+        "CLOUDFLARE_STARTUP_VALIDATION_FAILED",
+        "Cloudflare did not return module startup validation.",
+      );
     }
-    const health = await fetch(this.healthProbe.url, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${this.healthProbe.token}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        scriptName,
-        deploymentId: input.deploymentId,
-        environment: input.environment,
-        artifactHash: input.artifactHash,
-      }),
-      redirect: "manual",
-      signal: AbortSignal.timeout(30_000),
-    });
+    let health: Response;
+    try {
+      health = await fetch(this.healthProbe.url, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${this.healthProbe.token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          scriptName,
+          deploymentId: input.deploymentId,
+          environment: input.environment,
+          artifactHash: input.artifactHash,
+        }),
+        redirect: "manual",
+        signal: AbortSignal.timeout(30_000),
+      });
+    } catch (error) {
+      throw new DeploymentProviderError(
+        "RUNTIME_HEALTH_REQUEST_FAILED",
+        "The runtime health endpoint could not be reached.",
+        { cause: error },
+      );
+    }
     if (!health.ok)
-      throw new Error(`Deployed Worker health check failed with status ${health.status}.`);
-    const healthResult = (await health.json()) as { health?: unknown; scriptName?: unknown };
+      throw new DeploymentProviderError(
+        "RUNTIME_HEALTH_CHECK_FAILED",
+        `The deployed Worker health check returned status ${health.status}.`,
+      );
+    const healthResult = (await health.json().catch(() => ({}))) as {
+      health?: unknown;
+      scriptName?: unknown;
+    };
     if (healthResult.health !== "passed" || healthResult.scriptName !== scriptName) {
-      throw new Error("Deployed Worker health response was invalid.");
+      throw new DeploymentProviderError(
+        "RUNTIME_HEALTH_CHECK_FAILED",
+        "The deployed Worker health response was invalid.",
+      );
     }
     return { providerDeploymentId: `${namespace}:${payload.result.id ?? scriptName}` };
   }

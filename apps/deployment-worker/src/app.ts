@@ -3,7 +3,7 @@ import type { ToolflowArtifact } from "@toolflow/build-system";
 import { appManifestSchema } from "@toolflow/contracts";
 import { Hono } from "hono";
 import { z } from "zod";
-import type { DeploymentProvider } from "./provider.js";
+import { DeploymentProviderError, type DeploymentProvider } from "./provider.js";
 
 const publishInput = z.object({
   deploymentId: z.string().uuid(),
@@ -69,16 +69,20 @@ export function createDeploymentWorker(provider: DeploymentProvider, serviceToke
     });
     return context.json({ ...result, health: "passed" as const });
   });
-  app.onError((error, context) =>
-    context.json(
-      {
-        code: error instanceof z.ZodError ? "VALIDATION_FAILED" : "PUBLICATION_FAILED",
-        message:
-          error instanceof z.ZodError ? "Deployment request is invalid." : "Publication failed.",
-      },
-      error instanceof z.ZodError ? 422 : 502,
-    ),
-  );
+  app.onError((error, context) => {
+    if (error instanceof z.ZodError) {
+      return context.json(
+        { code: "VALIDATION_FAILED", message: "Deployment request is invalid." },
+        422,
+      );
+    }
+    if (error instanceof DeploymentProviderError) {
+      console.error("Deployment provider failed.", { code: error.code, cause: error.cause });
+      return context.json({ code: error.code, message: error.message }, 502);
+    }
+    console.error("Unexpected deployment publication failure.", error);
+    return context.json({ code: "PUBLICATION_FAILED", message: "Publication failed." }, 502);
+  });
   return app;
 }
 

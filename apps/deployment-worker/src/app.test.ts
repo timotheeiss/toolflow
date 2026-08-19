@@ -1,8 +1,12 @@
 import { createHash } from "node:crypto";
 import type { ToolflowArtifact } from "@toolflow/build-system";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDeploymentWorker } from "./app.js";
-import { buildUserWorkerModule } from "./provider.js";
+import {
+  buildUserWorkerModule,
+  CloudflareDeploymentProvider,
+  DeploymentProviderError,
+} from "./provider.js";
 
 const artifact: ToolflowArtifact = {
   version: 1,
@@ -22,6 +26,11 @@ const artifact: ToolflowArtifact = {
   clientCss: "",
   serverJavaScript: "export default {fetch(){return new Response('ok')}}",
 };
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
@@ -62,6 +71,68 @@ describe("deployment worker", () => {
       health: "passed",
     });
     expect(publish).toHaveBeenCalledOnce();
+  });
+
+  it("returns safe provider-stage diagnostics instead of hiding publication failures", async () => {
+    const report = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const app = createDeploymentWorker(
+      {
+        publish: vi.fn(() =>
+          Promise.reject(
+            new DeploymentProviderError(
+              "RUNTIME_HEALTH_REQUEST_FAILED",
+              "The runtime health endpoint could not be reached.",
+            ),
+          ),
+        ),
+      },
+      "s".repeat(32),
+    );
+    const artifactHash = createHash("sha256").update(stableJson(artifact)).digest("hex");
+    const response = await app.request("/v1/publish", {
+      method: "POST",
+      headers: { authorization: `Bearer ${"s".repeat(32)}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        deploymentId: "00000000-0000-4000-8000-000000000001",
+        organizationId: "00000000-0000-4000-8000-000000000002",
+        appId: "00000000-0000-4000-8000-000000000003",
+        appSlug: "test-app",
+        environment: "preview",
+        artifactHash,
+        artifact,
+      }),
+    });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      code: "RUNTIME_HEALTH_REQUEST_FAILED",
+      message: "The runtime health endpoint could not be reached.",
+    });
+    expect(report).toHaveBeenCalledOnce();
+  });
+
+  it("distinguishes a runtime health network failure from a Cloudflare upload failure", async () => {
+    const publish = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        Response.json({ success: true, result: { id: "script", startup_time_ms: 1 } }),
+      )
+      .mockRejectedValueOnce(new TypeError("host lookup failed"));
+    vi.stubGlobal("fetch", publish);
+    const provider = new CloudflareDeploymentProvider(
+      "account",
+      "token",
+      { preview: "preview", production: "production" },
+      { url: "https://runtime-health.toolflow.test/internal/health", token: "s".repeat(32) },
+    );
+    await expect(
+      provider.publish({
+        deploymentId: "00000000-0000-4000-8000-000000000001",
+        environment: "preview",
+        artifactHash: "a".repeat(64),
+        artifact,
+      }),
+    ).rejects.toMatchObject({ code: "RUNTIME_HEALTH_REQUEST_FAILED" });
+    expect(publish).toHaveBeenCalledTimes(2);
   });
 
   it("wraps the user server without leaking dispatcher identity headers", () => {

@@ -4,7 +4,7 @@ This repository is configured for one pilot environment on `toolflow.space`. It 
 
 ## Provider setup
 
-1. Register `toolflow.space` and add it to Cloudflare. Create a proxied wildcard DNS `A` record named `*.apps` with value `192.0.2.0`, then deploy the route `*.apps.toolflow.space/*` from `apps/runtime-dispatch-worker/wrangler.pilot.jsonc`.
+1. Register `toolflow.space` and add it to Cloudflare. Create proxied DNS `A` records named `*.apps` and `runtime-health`, both with value `192.0.2.0`. Provision an edge certificate that explicitly covers `*.apps.toolflow.space` (the default `*.toolflow.space` certificate does not cover this nested wildcard), then deploy both routes from `apps/runtime-dispatch-worker/wrangler.pilot.jsonc`.
 2. Create a Supabase project in Paris. Use its transaction pooler URL for `DATABASE_URL` and its direct URL only for `DIRECT_DATABASE_URL` when running migrations/bootstrap.
 3. Create the private R2 bucket `toolflow-pilot`, then create an R2 token scoped only to that bucket.
 4. In WorkOS AuthKit, add `https://api.toolflow.space/auth/callback`, create the pilot organization, and invite the initial administrator.
@@ -21,11 +21,16 @@ TOOLFLOW_ADMIN_ORIGIN=https://console.toolflow.space
 WORKOS_REDIRECT_URI=https://api.toolflow.space/auth/callback
 TOOLFLOW_MCP_RESOURCE_URL=https://mcp.toolflow.space/mcp
 TOOLFLOW_RUNTIME_BASE_URL=https://apps.toolflow.space
+TOOLFLOW_DISPATCH_HEALTH_URL=https://runtime-health.toolflow.space/internal/health
 TOOLFLOW_DATA_GATEWAY_URL=https://data.toolflow.space
 TOOLFLOW_DEPLOYMENT_SERVICE_URL=https://deploy.toolflow.space
 TOOLFLOW_BUILD_SERVICE_URL=https://build.toolflow.space
 TOOLFLOW_BUILD_EXECUTION=external
 ```
+
+Set `TOOLFLOW_DISPATCH_HEALTH_TOKEN` on the Vercel API project and the
+`TOOLFLOW_HEALTH_SERVICE_TOKEN` Worker secret to the same random value of at
+least 32 characters.
 
 The build project receives only `DATABASE_URL`, the R2 credentials, `TOOLFLOW_BUILD_SERVICE_TOKEN`, `TOOLFLOW_BUILD_TIMEOUT_MS=50000`, and `TOOLFLOW_BUILD_MAX_ARTIFACT_BYTES`. Never add WorkOS, Cloudflare, runtime-context, deployment, or gateway secrets to it. Vercel Hobby functions have a 60-second ceiling, so the build timeout deliberately leaves time for setup and cleanup. Upgrade to Vercel Pro before raising this limit.
 

@@ -13,7 +13,10 @@
   "main": "dist/index.js",
   "compatibility_date": "2026-08-01",
   "workers_dev": false,
-  "routes": [{ "pattern": "*.apps.toolflow.space/*", "zone_name": "toolflow.space" }],
+  "routes": [
+    { "pattern": "*.apps.toolflow.space/*", "zone_name": "toolflow.space" },
+    { "pattern": "runtime-health.toolflow.space/*", "zone_name": "toolflow.space" }
+  ],
   "dispatch_namespaces": [{
     "binding": "TOOLFLOW_USER_WORKERS",
     "namespace": "toolflow-production",
