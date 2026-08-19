@@ -71,10 +71,6 @@ const runtimePackages = [
 // Resolve every package independently. Serverless providers trace and relocate
 // application files, so inferring one shared node_modules directory from the
 // compiler's source path (or from pnpm's realpath) is not reliable.
-const runtimePackageRoots = new Map(
-  runtimePackages.map((name) => [name, resolveRuntimePackageRoot(name)]),
-);
-const vitestCli = runtimeRequire.resolve("vitest/vitest.mjs");
 const execFileAsync = promisify(execFile);
 
 export async function compileSource(
@@ -116,12 +112,12 @@ export async function compileSource(
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, file.content, { encoding: "utf8", mode: 0o600 });
     }
-    await linkRuntimePackages(directory);
+    await linkRuntimePackages(directory, resolveRuntimePackageRoots());
     const typeDiagnostics = typecheckSource(bundle, directory);
     if (typeDiagnostics.length) {
       return { artifact: null, artifactHash: null, diagnostics: typeDiagnostics };
     }
-    const testDiagnostics = await runUnitTests(directory);
+    const testDiagnostics = await runUnitTests(directory, runtimeRequire.resolve("vitest/vitest.mjs"));
     if (testDiagnostics.length) {
       return { artifact: null, artifactHash: null, diagnostics: testDiagnostics };
     }
@@ -253,7 +249,14 @@ function resolveRuntimePackageRoot(packageName: (typeof runtimePackages)[number]
   }
 }
 
-async function linkRuntimePackages(directory: string): Promise<void> {
+function resolveRuntimePackageRoots(): Map<(typeof runtimePackages)[number], string> {
+  return new Map(runtimePackages.map((name) => [name, resolveRuntimePackageRoot(name)]));
+}
+
+async function linkRuntimePackages(
+  directory: string,
+  runtimePackageRoots: ReadonlyMap<(typeof runtimePackages)[number], string>,
+): Promise<void> {
   for (const [packageName, source] of runtimePackageRoots) {
     const destination = join(directory, "node_modules", packageName);
     await mkdir(dirname(destination), { recursive: true });
@@ -261,7 +264,7 @@ async function linkRuntimePackages(directory: string): Promise<void> {
   }
 }
 
-async function runUnitTests(directory: string): Promise<BuildDiagnostic[]> {
+async function runUnitTests(directory: string, vitestCli: string): Promise<BuildDiagnostic[]> {
   try {
     await execFileAsync(
       process.execPath,
