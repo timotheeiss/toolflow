@@ -48,8 +48,6 @@ export class CloudflareDeploymentProvider implements DeploymentProvider {
     const metadata = {
       main_module: "main.js",
       compatibility_date: "2026-08-01",
-      usage_model: "standard",
-      limits: { cpu_ms: 50 },
       bindings: [],
     };
     const body = new FormData();
@@ -92,9 +90,19 @@ export class CloudflareDeploymentProvider implements DeploymentProvider {
       const errorCodes = payload.errors
         ?.map((error) => error.code)
         .filter((code): code is number => typeof code === "number");
+      const diagnostic = payload.errors
+        ?.slice(0, 3)
+        .map((error) =>
+          `${typeof error.code === "number" ? `[${error.code}] ` : ""}${error.message ?? "Unknown Cloudflare error."}`.slice(
+            0,
+            1_000,
+          ),
+        )
+        .join("; ");
       throw new DeploymentProviderError(
         "CLOUDFLARE_UPLOAD_FAILED",
         `Cloudflare rejected publication with status ${response.status}${errorCodes?.length ? ` (errors: ${errorCodes.join(", ")})` : ""}.`,
+        diagnostic ? { cause: new Error(diagnostic) } : undefined,
       );
     }
     if (typeof payload.result?.startup_time_ms !== "number") {

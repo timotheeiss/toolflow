@@ -133,6 +133,49 @@ describe("deployment worker", () => {
       }),
     ).rejects.toMatchObject({ code: "RUNTIME_HEALTH_REQUEST_FAILED" });
     expect(publish).toHaveBeenCalledTimes(2);
+    const upload = publish.mock.calls[0]?.[1];
+    const uploadBody = upload?.body as FormData;
+    const metadata = uploadBody.get("metadata") as Blob;
+    expect(JSON.parse(await metadata.text())).toEqual({
+      main_module: "main.js",
+      compatibility_date: "2026-08-01",
+      bindings: [],
+    });
+  });
+
+  it("retains Cloudflare validation text for internal diagnostics", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          Response.json(
+            {
+              success: false,
+              errors: [{ code: 100328, message: "Account setting rejected the upload." }],
+            },
+            { status: 400 },
+          ),
+        ),
+      ),
+    );
+    const provider = new CloudflareDeploymentProvider(
+      "account",
+      "token",
+      { preview: "preview", production: "production" },
+      { url: "https://runtime-health.toolflow.test/internal/health", token: "s".repeat(32) },
+    );
+    const failure = await provider
+      .publish({
+        deploymentId: "00000000-0000-4000-8000-000000000001",
+        environment: "preview",
+        artifactHash: "a".repeat(64),
+        artifact,
+      })
+      .catch((error: unknown) => error);
+    expect(failure).toMatchObject({
+      code: "CLOUDFLARE_UPLOAD_FAILED",
+      cause: { message: "[100328] Account setting rejected the upload." },
+    });
   });
 
   it("wraps the user server without leaking dispatcher identity headers", () => {
