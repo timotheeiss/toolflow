@@ -183,9 +183,19 @@ async function internalHealth(
     return new Response(null, { status: 422 });
   }
   try {
-    // The authenticated probe is handled by the platform wrapper before app code.
-    // Avoid plan-dependent custom limits and outbound parameters for this invocation.
-    const worker = environment.TOOLFLOW_USER_WORKERS.get(scriptName);
+    // The namespace binding requires every configured outbound parameter even though
+    // the platform-owned health route returns before the user Worker can make a subrequest.
+    const worker = environment.TOOLFLOW_USER_WORKERS.get(
+      scriptName,
+      {},
+      {
+        outbound: {
+          TOOLFLOW_DATA_GATEWAY_ORIGIN: environment.TOOLFLOW_DATA_GATEWAY_ORIGIN,
+          TOOLFLOW_RUNTIME_CONTEXT_TOKEN: "health-probe-not-authorized",
+          TOOLFLOW_DISPATCH_CONTEXT: JSON.stringify({ healthProbe: true, scriptName }),
+        },
+      },
+    );
     const response = await worker.fetch(
       new Request("https://toolflow.internal/api/health", {
         headers: { "x-toolflow-health-probe": "true" },

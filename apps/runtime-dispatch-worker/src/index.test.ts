@@ -189,7 +189,20 @@ describe("production dispatch worker", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ health: "passed", scriptName: grant.scriptName });
-    expect(fixture.get).toHaveBeenCalledWith(grant.scriptName);
+    expect(fixture.get).toHaveBeenCalledWith(
+      grant.scriptName,
+      {},
+      {
+        outbound: {
+          TOOLFLOW_DATA_GATEWAY_ORIGIN: "https://data.toolflow.test",
+          TOOLFLOW_RUNTIME_CONTEXT_TOKEN: "health-probe-not-authorized",
+          TOOLFLOW_DISPATCH_CONTEXT: JSON.stringify({
+            healthProbe: true,
+            scriptName: grant.scriptName,
+          }),
+        },
+      },
+    );
   });
 
   it("distinguishes a missing namespaced Worker from an app health failure", async () => {
