@@ -6,17 +6,7 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 60,
-      "includeFiles": [
-        "../../packages/build-system/node_modules/@toolflow/app-sdk/**",
-        "../../packages/build-system/node_modules/@toolflow/components/**",
-        "../../packages/build-system/node_modules/hono/**",
-        "../../packages/build-system/node_modules/react/**",
-        "../../packages/build-system/node_modules/react-dom/**",
-        "../../packages/build-system/node_modules/typescript/lib/**",
-        "../../packages/build-system/node_modules/vitest/**",
-        "../../packages/build-system/node_modules/@types/react/**",
-        "../../packages/build-system/node_modules/@types/react-dom/**"
-      ]
+      "includeFiles": "../../packages/build-system/node_modules/**"
     }
   },
   "routes": [

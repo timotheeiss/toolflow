@@ -4,7 +4,10 @@
   "outputDirectory": "public",
   "regions": ["cdg1"],
   "functions": {
-    "api/index.ts": { "maxDuration": 60 }
+    "api/index.ts": {
+      "maxDuration": 60,
+      "includeFiles": "../../packages/build-system/node_modules/**"
+    }
   },
   "routes": [
     { "src": "/(?<toolflowPath>.*)", "dest": "/api/index.ts?__toolflow_path=$toolflowPath" }

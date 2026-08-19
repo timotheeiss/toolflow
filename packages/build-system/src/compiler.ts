@@ -13,6 +13,11 @@ import {
   type SourceBundle,
 } from "@toolflow/contracts";
 import { forbiddenSourceConstructs, manifestPath } from "@toolflow/app-template";
+// These fixed-runtime packages are resolved dynamically below for each isolated
+// app build. Keep static imports so Vercel's file tracer includes them in the
+// serverless function bundle.
+import "@toolflow/app-sdk";
+import "@toolflow/components";
 import ts from "typescript";
 
 export interface BuildDiagnostic {
