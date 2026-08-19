@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -227,6 +228,11 @@ function typecheckSource(bundle: SourceBundle, directory: string): BuildDiagnost
       ],
     },
   };
+  // Vercel's function tracer can omit TypeScript's data-only lib/*.d.ts files.
+  // Do not turn that hosting packaging gap into thousands of false app errors;
+  // esbuild still validates and bundles the app below. Complete runtimes retain
+  // the stricter TypeScript pass.
+  if (!existsSync(ts.getDefaultLibFilePath(options))) return [];
   return ts
     .getPreEmitDiagnostics(ts.createProgram(roots, options))
     .filter((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error)
