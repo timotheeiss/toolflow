@@ -22,7 +22,6 @@ import "@toolflow/components";
 import "react-dom";
 import "react-dom/client";
 import ts from "typescript";
-import "vitest";
 
 export interface BuildDiagnostic {
   phase: "manifest" | "policy" | "typecheck" | "bundle" | "test";
@@ -68,11 +67,12 @@ const runtimePackages = [
   "react",
   "react-dom",
   "typescript",
-  "vitest",
 ] as const;
+const vitestCli = fileURLToPath(new URL("../node_modules/vitest/vitest.mjs", import.meta.url));
 const runtimeTypePackageRoots = new Map([
   ["@types/react", dirname(fileURLToPath(new URL("../node_modules/@types/react/package.json", import.meta.url)))],
   ["@types/react-dom", dirname(fileURLToPath(new URL("../node_modules/@types/react-dom/package.json", import.meta.url)))],
+  ["vitest", dirname(vitestCli)],
 ] as const);
 // Resolve every package independently. Serverless providers trace and relocate
 // application files, so inferring one shared node_modules directory from the
@@ -123,7 +123,7 @@ export async function compileSource(
     if (typeDiagnostics.length) {
       return { artifact: null, artifactHash: null, diagnostics: typeDiagnostics };
     }
-    const testDiagnostics = await runUnitTests(directory, runtimeRequire.resolve("vitest/vitest.mjs"));
+    const testDiagnostics = await runUnitTests(directory, vitestCli);
     if (testDiagnostics.length) {
       return { artifact: null, artifactHash: null, diagnostics: testDiagnostics };
     }
