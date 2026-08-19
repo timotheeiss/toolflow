@@ -1,4 +1,8 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import type { ToolflowArtifact } from "@toolflow/build-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDeploymentWorker } from "./app.js";
@@ -220,5 +224,32 @@ describe("deployment worker", () => {
     expect(module).toContain("window.__TOOLFLOW_CONTEXT__");
     expect(module).toContain("nonce-");
     expect(module).not.toContain("'unsafe-inline'");
+  });
+
+  it("serves the authenticated platform health probe without app route participation", async () => {
+    const directory = join(tmpdir(), `toolflow-worker-module-${randomUUID()}`);
+    await mkdir(directory, { recursive: true });
+    try {
+      await Promise.all([
+        writeFile(join(directory, "main.mjs"), buildUserWorkerModule(artifact)),
+        writeFile(
+          join(directory, "user-server.js"),
+          'export default {fetch(){return new Response("app health is broken",{status:503})}}',
+        ),
+        writeFile(join(directory, "package.json"), '{"type":"module"}'),
+      ]);
+      const worker = (await import(pathToFileURL(join(directory, "main.mjs")).href)) as {
+        default: { fetch(request: Request): Promise<Response> };
+      };
+      const response = await worker.default.fetch(
+        new Request("https://toolflow.internal/api/health", {
+          headers: { "x-toolflow-health-probe": "true" },
+        }),
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ status: "ok" });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

@@ -212,4 +212,29 @@ describe("production dispatch worker", () => {
     expect(report).toHaveBeenCalledOnce();
     report.mockRestore();
   });
+
+  it("reports the exact health stage when an uploaded Worker returns a failure", async () => {
+    const report = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const fixture = environment();
+    fixture.dispatchedFetch.mockResolvedValue(new Response("unavailable", { status: 503 }));
+    const response = await handleDispatchRequest(
+      new Request("https://apps.toolflow.test/internal/health", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${"h".repeat(32)}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ scriptName: grant.scriptName }),
+      }),
+      fixture.value,
+      { waitUntil: vi.fn() },
+    );
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      code: "APP_HEALTH_HTTP_FAILED",
+      message: "Deployed app health endpoint returned status 503.",
+    });
+    expect(report).toHaveBeenCalledOnce();
+    report.mockRestore();
+  });
 });

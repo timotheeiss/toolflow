@@ -193,28 +193,64 @@ async function internalHealth(
       }),
     );
     const body = await response.text();
-    if (!response.ok || body.length > 2_048) throw new Error("Health response failed.");
-    const result = JSON.parse(body) as { status?: unknown };
-    if (result.status !== "ok") throw new Error("Health response failed.");
+    if (!response.ok) {
+      return healthFailure(
+        scriptName,
+        "APP_HEALTH_HTTP_FAILED",
+        `Deployed app health endpoint returned status ${response.status}.`,
+      );
+    }
+    if (body.length > 2_048) {
+      return healthFailure(
+        scriptName,
+        "APP_HEALTH_RESPONSE_TOO_LARGE",
+        "Deployed app health response exceeded the platform limit.",
+      );
+    }
+    let result: { status?: unknown };
+    try {
+      result = JSON.parse(body) as { status?: unknown };
+    } catch (error) {
+      return healthFailure(
+        scriptName,
+        "APP_HEALTH_RESPONSE_INVALID",
+        "Deployed app health response was not valid JSON.",
+        error,
+      );
+    }
+    if (result.status !== "ok") {
+      return healthFailure(
+        scriptName,
+        "APP_HEALTH_RESPONSE_INVALID",
+        "Deployed app health response did not report an ok status.",
+      );
+    }
     return Response.json({ health: "passed", scriptName });
   } catch (error) {
     const workerMissing =
       error instanceof Error && error.message.toLowerCase().includes("worker not found");
-    console.error("User Worker health probe failed.", {
-      code: workerMissing ? "USER_WORKER_NOT_FOUND" : "HEALTHCHECK_FAILED",
+    return healthFailure(
       scriptName,
-      cause: error,
-    });
-    return Response.json(
+      workerMissing ? "USER_WORKER_NOT_FOUND" : "USER_WORKER_INVOCATION_FAILED",
       workerMissing
-        ? {
-            code: "USER_WORKER_NOT_FOUND",
-            message: "Uploaded Worker is not available in the configured dispatch namespace.",
-          }
-        : { code: "HEALTHCHECK_FAILED", message: "Deployed app health check failed." },
-      { status: 502, headers: { "cache-control": "no-store" } },
+        ? "Uploaded Worker is not available in the configured dispatch namespace."
+        : "Uploaded Worker could not be invoked for its health check.",
+      error,
     );
   }
+}
+
+function healthFailure(
+  scriptName: string,
+  code: string,
+  message: string,
+  cause?: unknown,
+): Response {
+  console.error("User Worker health probe failed.", { code, scriptName, cause });
+  return Response.json(
+    { code, message },
+    { status: 502, headers: { "cache-control": "no-store" } },
+  );
 }
 
 async function authorize(
