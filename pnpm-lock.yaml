@@ -122,8 +122,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/secrets
       '@workos-inc/node':
-        specifier: 10.9.0
-        version: 10.9.0
+        specifier: 10.10.0
+        version: 10.10.0
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@types/pg@8.21.0)(pg@8.23.0)
@@ -327,8 +327,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/runtime-context
       '@workos-inc/node':
-        specifier: 10.9.0
-        version: 10.9.0
+        specifier: 10.10.0
+        version: 10.10.0
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@types/pg@8.21.0)(pg@8.23.0)
@@ -445,8 +445,8 @@ importers:
         specifier: workspace:*
         version: link:../contracts
       '@workos-inc/node':
-        specifier: 10.9.0
-        version: 10.9.0
+        specifier: 10.10.0
+        version: 10.10.0
       jose:
         specifier: ^6.1.0
         version: 6.2.8
@@ -1457,8 +1457,8 @@ packages:
   '@vitest/utils@3.2.7':
     resolution: {integrity: sha512-x6BDOd7dyo3PFLY3I9/HJ25X/6OurhGXk2/B9gOZNPF7XDVjeBK4k01lQE5uvDpbuheErh91qYuE1E2OEjK3Rw==}
 
-  '@workos-inc/node@10.9.0':
-    resolution: {integrity: sha512-Voxhxocg7Q9lpi1gJ6qyPCjgcjh7fZmxU0gR7BQRnv+ozCJ9Xj4jZulVt38tGMukniDI1uwTiXm+G2vdogpD4Q==}
+  '@workos-inc/node@10.10.0':
+    resolution: {integrity: sha512-qAf00a0DaIFD2yX4D11jCnMsk8w5FpE4Oif8EDBxGnPR1WNelqPeQqRrwX4/9xUpQV0asI6SFkdaffEj6IO33Q==}
     engines: {node: '>=22.11.0'}
 
   acorn-jsx@5.3.2:
@@ -3039,7 +3039,7 @@ snapshots:
       loupe: 3.2.1
       tinyrainbow: 2.0.0
 
-  '@workos-inc/node@10.9.0': {}
+  '@workos-inc/node@10.10.0': {}
 
   acorn-jsx@5.3.2(acorn@8.18.0):
     dependencies:
