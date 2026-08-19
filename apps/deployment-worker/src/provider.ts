@@ -135,11 +135,23 @@ export class CloudflareDeploymentProvider implements DeploymentProvider {
         { cause: error },
       );
     }
-    if (!health.ok)
+    if (!health.ok) {
+      const responseText = (await health.text().catch(() => "")).slice(0, 2_048);
+      let diagnostic = responseText;
+      try {
+        const responseBody = JSON.parse(responseText) as { code?: unknown; message?: unknown };
+        diagnostic = [responseBody.code, responseBody.message]
+          .filter((value): value is string => typeof value === "string")
+          .join(": ");
+      } catch {
+        // Retain the bounded plain-text response for internal diagnostics.
+      }
       throw new DeploymentProviderError(
         "RUNTIME_HEALTH_CHECK_FAILED",
         `The deployed Worker health check returned status ${health.status}.`,
+        diagnostic ? { cause: new Error(diagnostic) } : undefined,
       );
+    }
     const healthResult = (await health.json().catch(() => ({}))) as {
       health?: unknown;
       scriptName?: unknown;

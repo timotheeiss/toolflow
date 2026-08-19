@@ -178,6 +178,39 @@ describe("deployment worker", () => {
     });
   });
 
+  it("retains a failed runtime health response for internal diagnostics", async () => {
+    const publish = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        Response.json({ success: true, result: { id: "script", startup_time_ms: 1 } }),
+      )
+      .mockResolvedValueOnce(
+        Response.json(
+          { code: "USER_WORKER_NOT_FOUND", message: "Worker namespace mismatch." },
+          { status: 502 },
+        ),
+      );
+    vi.stubGlobal("fetch", publish);
+    const provider = new CloudflareDeploymentProvider(
+      "account",
+      "token",
+      { preview: "preview", production: "production" },
+      { url: "https://runtime-health.toolflow.test/internal/health", token: "s".repeat(32) },
+    );
+    const failure = await provider
+      .publish({
+        deploymentId: "00000000-0000-4000-8000-000000000001",
+        environment: "preview",
+        artifactHash: "a".repeat(64),
+        artifact,
+      })
+      .catch((error: unknown) => error);
+    expect(failure).toMatchObject({
+      code: "RUNTIME_HEALTH_CHECK_FAILED",
+      cause: { message: "USER_WORKER_NOT_FOUND: Worker namespace mismatch." },
+    });
+  });
+
   it("wraps the user server without leaking dispatcher identity headers", () => {
     const module = buildUserWorkerModule(artifact);
     expect(module).toContain('import userServer from "./user-server.js"');

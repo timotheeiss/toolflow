@@ -77,7 +77,11 @@ export function createDeploymentWorker(provider: DeploymentProvider, serviceToke
       );
     }
     if (error instanceof DeploymentProviderError) {
-      console.error("Deployment provider failed.", { code: error.code, cause: error.cause });
+      console.error("Deployment provider failed.", {
+        code: error.code,
+        message: error.message,
+        cause: error.cause,
+      });
       return context.json({ code: error.code, message: error.message }, 502);
     }
     console.error("Unexpected deployment publication failure.", error);

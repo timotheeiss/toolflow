@@ -197,9 +197,21 @@ async function internalHealth(
     const result = JSON.parse(body) as { status?: unknown };
     if (result.status !== "ok") throw new Error("Health response failed.");
     return Response.json({ health: "passed", scriptName });
-  } catch {
+  } catch (error) {
+    const workerMissing =
+      error instanceof Error && error.message.toLowerCase().includes("worker not found");
+    console.error("User Worker health probe failed.", {
+      code: workerMissing ? "USER_WORKER_NOT_FOUND" : "HEALTHCHECK_FAILED",
+      scriptName,
+      cause: error,
+    });
     return Response.json(
-      { code: "HEALTHCHECK_FAILED", message: "Deployed app health check failed." },
+      workerMissing
+        ? {
+            code: "USER_WORKER_NOT_FOUND",
+            message: "Uploaded Worker is not available in the configured dispatch namespace.",
+          }
+        : { code: "HEALTHCHECK_FAILED", message: "Deployed app health check failed." },
       { status: 502, headers: { "cache-control": "no-store" } },
     );
   }

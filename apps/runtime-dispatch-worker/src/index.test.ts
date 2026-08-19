@@ -190,4 +190,26 @@ describe("production dispatch worker", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ health: "passed", scriptName: grant.scriptName });
   });
+
+  it("distinguishes a missing namespaced Worker from an app health failure", async () => {
+    const report = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const fixture = environment();
+    fixture.dispatchedFetch.mockRejectedValue(new Error("Worker not found in namespace"));
+    const response = await handleDispatchRequest(
+      new Request("https://apps.toolflow.test/internal/health", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${"h".repeat(32)}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ scriptName: grant.scriptName }),
+      }),
+      fixture.value,
+      { waitUntil: vi.fn() },
+    );
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({ code: "USER_WORKER_NOT_FOUND" });
+    expect(report).toHaveBeenCalledOnce();
+    report.mockRestore();
+  });
 });
