@@ -121,7 +121,7 @@ export function createToolflowMcpServer(
   function register<I extends z.ZodObject<z.ZodRawShape>, O extends z.ZodObject<z.ZodRawShape>>(
     name: string,
     description: string,
-    scope: string,
+    _legacyScope: string,
     inputSchema: I,
     outputSchema: O,
     handler: (input: z.infer<I>) => Promise<unknown>,
@@ -134,13 +134,6 @@ export function createToolflowMcpServer(
       const startedAt = performance.now();
       let outcome: "succeeded" | "failed" | "denied" = "succeeded";
       try {
-        if (!principal.scopes.includes(scope)) {
-          outcome = "denied";
-          throw new McpServiceError(
-            "AUTHORIZATION_DENIED",
-            `${name} requires the ${scope} OAuth scope.`,
-          );
-        }
         const parsedInput = input as z.infer<I>;
         const result = mutation
           ? await idempotentMutation(name, parsedInput, () => handler(parsedInput))
@@ -150,15 +143,13 @@ export function createToolflowMcpServer(
           structuredContent: result as Record<string, unknown>,
         };
       } catch (error) {
-        if (outcome !== "denied") {
-          outcome =
-            (error instanceof McpServiceError ||
-              error instanceof LifecycleError ||
-              error instanceof AppDataError) &&
-            error.code === "AUTHORIZATION_DENIED"
-              ? "denied"
-              : "failed";
-        }
+        outcome =
+          (error instanceof McpServiceError ||
+            error instanceof LifecycleError ||
+            error instanceof AppDataError) &&
+          error.code === "AUTHORIZATION_DENIED"
+            ? "denied"
+            : "failed";
         const code =
           error instanceof McpServiceError ||
           error instanceof LifecycleError ||
@@ -225,7 +216,7 @@ export function createToolflowMcpServer(
           openWorldHint: false,
         },
         _meta: {
-          requiredScopes: ["toolflow:mcp", scope],
+          requiredScopes: ["openid"],
           errorCodes: [
             "AUTHENTICATION_FAILED",
             "AUTHORIZATION_DENIED",

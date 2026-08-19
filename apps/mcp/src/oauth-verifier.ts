@@ -56,7 +56,7 @@ export class DevelopmentAccessTokenVerifier implements AccessTokenVerifier {
       sessionId: "development-mcp-session",
       clientId: "development-mcp-client",
       expiresAt: Math.floor(Date.now() / 1_000) + 3_600,
-      scopes: ["toolflow:mcp", "toolflow:read", "toolflow:write", "toolflow:deploy"],
+      scopes: ["openid", "profile", "email", "offline_access"],
     });
   }
 }

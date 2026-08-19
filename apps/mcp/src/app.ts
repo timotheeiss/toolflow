@@ -92,19 +92,18 @@ export function createMcpApp(dependencies: McpAppDependencies) {
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: ["none", "client_secret_basic"],
-    scopes_supported: ["toolflow:mcp", "toolflow:read", "toolflow:write", "toolflow:deploy"],
+    scopes_supported: ["openid", "profile", "email", "offline_access"],
   };
   const metadataOptions = {
     oauthMetadata: metadata,
     resourceServerUrl: dependencies.resourceUrl,
     serviceDocumentationUrl: new URL("https://toolflow.example/docs/mcp"),
-    scopesSupported: ["toolflow:mcp", "toolflow:read", "toolflow:write", "toolflow:deploy"],
+    scopesSupported: ["openid", "profile", "email", "offline_access"],
     resourceName: "Toolflow organization tooling",
     dangerouslyAllowInsecureIssuerUrl: dependencies.allowInsecureIssuer,
   };
   const gate = requireBearerAuth({
     verifier: dependencies.verifier,
-    requiredScopes: ["toolflow:mcp"],
     resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(dependencies.resourceUrl),
   });
 
