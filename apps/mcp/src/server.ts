@@ -11,7 +11,7 @@ import type { AuthenticatedMcpPrincipal } from "./oauth-verifier.js";
 import { McpServiceError } from "./source-service.js";
 import type { ToolflowSourceService } from "./source-service.js";
 import { idempotencyRecords, type ToolflowDatabase } from "@toolflow/database";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as z from "zod";
 
 const pageInput = z.object({
@@ -78,10 +78,8 @@ export function createToolflowMcpServer(
     }
     const requestHash = createHash("sha256").update(stableJson(input)).digest("hex");
     const recordOperation = `mcp.${operation}`;
-    const scope = `${principal.organizationId}:${principal.userId}:${recordOperation}:${key}`;
-    return dependencies.database.transaction(async (transaction) => {
-      await transaction.execute(sql`select pg_advisory_xact_lock(hashtextextended(${scope}, 0))`);
-      const rows = await transaction
+    const readRecord = async () => {
+      const rows = await dependencies.database
         .select()
         .from(idempotencyRecords)
         .where(
@@ -93,29 +91,45 @@ export function createToolflowMcpServer(
           ),
         )
         .limit(1);
-      const record = rows[0];
-      if (record) {
-        if (record.requestHash !== requestHash) {
-          throw new McpServiceError("CONFLICT", "Idempotency key was used with another request.");
-        }
-        return record.response;
+      return rows[0];
+    };
+    const responseFor = (record: { requestHash: string; response: unknown }) => {
+      if (record.requestHash !== requestHash) {
+        throw new McpServiceError("CONFLICT", "Idempotency key was used with another request.");
       }
-      const result = await handler();
-      await transaction
-        .insert(idempotencyRecords)
-        .values({
-          organizationId: principal.organizationId,
-          actorId: principal.userId,
-          operation: recordOperation,
-          key,
-          requestHash,
-          statusCode: 200,
-          response: result,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1_000),
-        })
-        .onConflictDoNothing();
-      return result;
-    });
+      return record.response;
+    };
+
+    // Do not hold a database transaction while running a tool handler. Production
+    // uses a one-connection transaction pool, and several handlers need to issue
+    // their own queries and transactions. Holding the advisory-lock transaction
+    // here starved those handlers of the only connection until the request timed
+    // out (notably create_app).
+    const existing = await readRecord();
+    if (existing) return responseFor(existing);
+
+    const result = await handler();
+    const [created] = await dependencies.database
+      .insert(idempotencyRecords)
+      .values({
+        organizationId: principal.organizationId,
+        actorId: principal.userId,
+        operation: recordOperation,
+        key,
+        requestHash,
+        statusCode: 200,
+        response: result,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1_000),
+      })
+      .onConflictDoNothing()
+      .returning({ id: idempotencyRecords.id });
+    if (created) return result;
+
+    const replay = await readRecord();
+    if (replay) return responseFor(replay);
+    // A conflicting insert without a visible record is unexpected, but returning
+    // the completed result is safer than retrying the side effect.
+    return result;
   }
 
   function register<I extends z.ZodObject<z.ZodRawShape>, O extends z.ZodObject<z.ZodRawShape>>(
