@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { build, type BuildFailure, type Message } from "esbuild";
 import {
@@ -60,14 +61,16 @@ const runtimeRequire = createRequire(import.meta.url);
 const runtimePackages = [
   "@toolflow/app-sdk",
   "@toolflow/components",
-  "@types/react",
-  "@types/react-dom",
   "hono",
   "react",
   "react-dom",
   "typescript",
   "vitest",
 ] as const;
+const runtimeTypePackageRoots = new Map([
+  ["@types/react", dirname(fileURLToPath(new URL("../node_modules/@types/react/package.json", import.meta.url)))],
+  ["@types/react-dom", dirname(fileURLToPath(new URL("../node_modules/@types/react-dom/package.json", import.meta.url)))],
+] as const);
 // Resolve every package independently. Serverless providers trace and relocate
 // application files, so inferring one shared node_modules directory from the
 // compiler's source path (or from pnpm's realpath) is not reliable.
@@ -249,13 +252,16 @@ function resolveRuntimePackageRoot(packageName: (typeof runtimePackages)[number]
   }
 }
 
-function resolveRuntimePackageRoots(): Map<(typeof runtimePackages)[number], string> {
-  return new Map(runtimePackages.map((name) => [name, resolveRuntimePackageRoot(name)]));
+function resolveRuntimePackageRoots(): Map<string, string> {
+  return new Map([
+    ...runtimePackages.map((name): [string, string] => [name, resolveRuntimePackageRoot(name)]),
+    ...runtimeTypePackageRoots,
+  ]);
 }
 
 async function linkRuntimePackages(
   directory: string,
-  runtimePackageRoots: ReadonlyMap<(typeof runtimePackages)[number], string>,
+  runtimePackageRoots: ReadonlyMap<string, string>,
 ): Promise<void> {
   for (const [packageName, source] of runtimePackageRoots) {
     const destination = join(directory, "node_modules", packageName);
