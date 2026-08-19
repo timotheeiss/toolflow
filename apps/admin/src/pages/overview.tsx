@@ -11,20 +11,19 @@ export function OverviewPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Control plane"
-        title="Organization overview"
-        description="See what is deployed, what needs attention, and which controls protect your internal tooling."
+        title="Overview"
+        description="A simple view of your apps, people, and data connections."
       />
       {state.status === "loading" ? <LoadingState label="Loading organization" /> : null}
       {state.status === "error" ? <ErrorState error={state.error} retry={state.reload} /> : null}
       {state.status === "success" ? (
         <div className="overview-grid">
           <section className="hero-card">
-            <div className="eyebrow">Signed in</div>
-            <h2>Your Toolflow control plane is connected.</h2>
+            <div className="eyebrow">Workspace status</div>
+            <h2>Everything is connected.</h2>
             <p>
-              Requests are scoped to organization <code>{state.data.principal.organizationId}</code>{" "}
-              and evaluated with the <strong>{state.data.principal.role}</strong> role.
+              You are signed in as an <strong>{state.data.principal.role}</strong>. Toolflow is ready
+              to manage this organization’s internal apps.
             </p>
           </section>
           <section className="metric-card">

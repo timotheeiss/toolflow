@@ -9,6 +9,7 @@ import {
   PaginationControls,
   StatusBadge,
 } from "../components.js";
+import { DataTabs } from "../data-tabs.js";
 import { toError, useAsync } from "../hooks.js";
 
 export function CatalogPage() {
@@ -53,10 +54,10 @@ export function CatalogPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Data"
-        title="Data catalog"
-        description="Document which tables and fields are authoritative, deprecated, or hidden."
+        title="Data"
+        description="Define trusted business meaning on approved schemas."
       />
+      <DataTabs />
       <section className="toolbar-card">
         <label>
           Connection

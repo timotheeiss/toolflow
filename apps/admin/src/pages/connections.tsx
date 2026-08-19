@@ -2,7 +2,9 @@ import type { PostgresConnectionInput } from "@toolflow/contracts";
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { controlApi } from "../api.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge } from "../components.js";
+import { DataTabs } from "../data-tabs.js";
 import { formString, toError, useAsync, useModalDialog } from "../hooks.js";
+import { Icon } from "../icons.js";
 
 export function ConnectionsPage() {
   const state = useAsync(useCallback(() => controlApi.listConnections(), []));
@@ -81,9 +83,8 @@ export function ConnectionsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Data"
-        title="Connections"
-        description="Manage approved read-only sources without exposing credentials to apps."
+        title="Data"
+        description="Manage connections and define a clear semantic layer for approved schemas."
         action={
           <button
             ref={addButton}
@@ -91,10 +92,12 @@ export function ConnectionsPage() {
             type="button"
             onClick={() => setDialogOpen(true)}
           >
+            <Icon name="plus" size={15} />
             Add connection
           </button>
         }
       />
+      <DataTabs />
       {error ? (
         <p className="form-error" role="alert">
           {error.message}
@@ -112,7 +115,8 @@ export function ConnectionsPage() {
         <div className="card-list">
           {state.data.connections.map((connection) => (
             <section className="entity-card" key={connection.id}>
-              <div>
+              <span className="connection-icon"><Icon name="data" size={17} /></span>
+              <div className="entity-main">
                 <div className="entity-heading">
                   <h2>{connection.name}</h2>
                   <StatusBadge value={connection.status} />

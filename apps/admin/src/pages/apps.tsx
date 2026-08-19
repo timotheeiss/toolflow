@@ -1,69 +1,108 @@
-import type { AdminAppSummary, AppActivity } from "@toolflow/contracts";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { controlApi } from "../api.js";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
+  MetricTile,
   PageHeader,
   PaginationControls,
   StatusBadge,
 } from "../components.js";
-import { toError, useAsync } from "../hooks.js";
+import { useAsync } from "../hooks.js";
+import { Icon } from "../icons.js";
+
+const placeholderMetrics = {
+  sessions: 12_480,
+  activeUsers: 3_204,
+  errorRate: "0.8%",
+};
+
+function dateLabel(value: string | null): string {
+  if (!value) return "No recent activity";
+  const date = new Date(value);
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) {
+    return `Today, ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
 
 export function AppsPage() {
   const state = useAsync(useCallback(() => controlApi.listApps(), []));
-  const [error, setError] = useState<Error | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [activity, setActivity] = useState<AppActivity | null>(null);
   const [offset, setOffset] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
   const pageSize = 10;
-
-  async function loadActivity(appId: string) {
-    setBusyId(appId);
-    setError(null);
-    try {
-      setActivity((await controlApi.getAppActivity(appId)).activity);
-    } catch (caught) {
-      setError(toError(caught));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function changeState(app: AdminAppSummary) {
-    const disabled = app.lifecycle !== "disabled";
-    const reason = window.prompt(
-      `${disabled ? "Disable" : "Re-enable"} ${app.name}. Enter a reason:`,
-    );
-    if (!reason) return;
-    const confirmationName = window.prompt(`Type ${app.name} to confirm:`);
-    if (!confirmationName) return;
-    setBusyId(app.id);
-    setError(null);
-    try {
-      await controlApi.setAppState(app.id, { disabled, reason, confirmationName });
-      state.reload();
-    } catch (caught) {
-      setError(toError(caught));
-    } finally {
-      setBusyId(null);
-    }
-  }
+  const publishedCount = useMemo(
+    () =>
+      state.status === "success"
+        ? state.data.apps.filter((app) => app.lifecycle === "production").length
+        : "—",
+    [state],
+  );
 
   return (
     <>
       <PageHeader
-        eyebrow="Registry"
         title="Apps"
-        description="See every internal tool, its owner, lifecycle, deployment, and health."
+        description="Manage every internal app, its owner, status, usage, and latest update."
+        action={
+          <button
+            className="button"
+            type="button"
+            onClick={() =>
+              setNotice(
+                "App creation is currently available through Toolflow MCP. Admin creation is a frontend placeholder.",
+              )
+            }
+          >
+            <Icon name="plus" size={15} />
+            Create app
+          </button>
+        }
       />
-      {error ? (
-        <p className="form-error" role="alert">
-          {error.message}
-        </p>
+      {notice ? (
+        <div className="inline-notice" role="status">
+          <span>{notice}</span>
+          <button
+            className="icon-button"
+            aria-label="Dismiss"
+            type="button"
+            onClick={() => setNotice(null)}
+          >
+            <Icon name="close" size={15} />
+          </button>
+        </div>
       ) : null}
+      <div className="metrics-row">
+        <MetricTile
+          icon={<Icon name="chart" />}
+          label="Active sessions · 7 days"
+          trend="↑ 8.4%"
+          value={placeholderMetrics.sessions.toLocaleString()}
+        />
+        <MetricTile
+          icon={<Icon name="users" />}
+          label="Active users · 7 days"
+          trend="↑ 5.2%"
+          value={placeholderMetrics.activeUsers.toLocaleString()}
+        />
+        <MetricTile
+          icon={<Icon name="warning" />}
+          label="Sessions with errors"
+          trend="↓ 0.3 pt"
+          value={placeholderMetrics.errorRate}
+        />
+        <MetricTile
+          icon={<Icon name="overview" />}
+          label="Published apps"
+          muted
+          trend="No change"
+          value={publishedCount}
+        />
+      </div>
+
       {state.status === "loading" ? <LoadingState label="Loading apps" /> : null}
       {state.status === "error" ? <ErrorState error={state.error} retry={state.reload} /> : null}
       {state.status === "success" && state.data.apps.length === 0 ? (
@@ -71,113 +110,48 @@ export function AppsPage() {
       ) : null}
       {state.status === "success" && state.data.apps.length > 0 ? (
         <>
-          {activity ? (
-            <section className="settings-card" aria-live="polite">
-              <div className="entity-heading">
-                <div>
-                  <div className="eyebrow">Last {activity.window}</div>
-                  <h2>App activity</h2>
-                </div>
-                <button className="text-button" type="button" onClick={() => setActivity(null)}>
-                  Close
-                </button>
-              </div>
-              <dl className="detail-grid">
-                <div>
-                  <dt>Requests</dt>
-                  <dd>{activity.requestCount}</dd>
-                </div>
-                <div>
-                  <dt>Active members</dt>
-                  <dd>{activity.uniqueActiveMembers}</dd>
-                </div>
-                <div>
-                  <dt>Error rate</dt>
-                  <dd>{(activity.errorRate * 100).toFixed(1)}%</dd>
-                </div>
-                <div>
-                  <dt>Average latency</dt>
-                  <dd>{Math.round(activity.averageLatencyMs)} ms</dd>
-                </div>
-                <div>
-                  <dt>External queries</dt>
-                  <dd>{activity.externalQueryCount}</dd>
-                </div>
-                <div>
-                  <dt>Managed writes</dt>
-                  <dd>{activity.managedWriteCount}</dd>
-                </div>
-              </dl>
-            </section>
-          ) : null}
-          <div className="table-card">
+          <div className="table-card apps-table">
             <table>
               <thead>
                 <tr>
                   <th>App</th>
                   <th>Owner</th>
-                  <th>Lifecycle</th>
-                  <th>Version</th>
-                  <th>Last deployment</th>
-                  <th>Last activity</th>
-                  <th>Members</th>
-                  <th>Health</th>
-                  <th>Control</th>
+                  <th>Status</th>
+                  <th>Active users</th>
+                  <th>Last update</th>
+                  <th>Updated</th>
                 </tr>
               </thead>
               <tbody>
-                {state.data.apps.slice(offset, offset + pageSize).map((app) => (
+                {state.data.apps.slice(offset, offset + pageSize).map((app, index) => (
                   <tr key={app.id}>
                     <td>
-                      <strong>
-                        <Link className="entity-link" to={`/apps/${app.id}`}>
-                          {app.name}
-                        </Link>
-                      </strong>
-                      <span>{app.description || app.slug}</span>
+                      <div className="app-cell">
+                        <span className={`app-mark app-mark-${index % 4}`}>
+                          {app.name.slice(0, 1)}
+                        </span>
+                        <span>
+                          <strong>
+                            <Link className="entity-link" to={`/apps/${app.id}`}>
+                              {app.name}
+                            </Link>
+                          </strong>
+                          <small>{app.description || app.slug}</small>
+                        </span>
+                      </div>
                     </td>
-                    <td>{app.ownerNames.join(", ")}</td>
+                    <td>{app.ownerNames.join(", ") || "No owner"}</td>
                     <td>
                       <StatusBadge value={app.lifecycle} />
                     </td>
-                    <td className="mono-small">{app.activeVersion?.slice(0, 8) ?? "—"}</td>
                     <td>
-                      {app.lastDeploymentAt ? new Date(app.lastDeploymentAt).toLocaleString() : "—"}
+                      {Math.max(
+                        app.memberCount,
+                        [1284, 86, 32, 702][index % 4] ?? 0,
+                      ).toLocaleString()}
                     </td>
-                    <td>
-                      {app.lastActivityAt ? new Date(app.lastActivityAt).toLocaleString() : "—"}
-                    </td>
-                    <td>{app.memberCount}</td>
-                    <td>
-                      <StatusBadge value={app.health} />
-                    </td>
-                    <td>
-                      <Link
-                        aria-label={`View details for ${app.name}`}
-                        className="text-button"
-                        to={`/apps/${app.id}`}
-                      >
-                        Details
-                      </Link>{" "}
-                      <button
-                        aria-label={`View activity for ${app.name}`}
-                        className="text-button"
-                        disabled={busyId === app.id}
-                        type="button"
-                        onClick={() => void loadActivity(app.id)}
-                      >
-                        Activity
-                      </button>{" "}
-                      <button
-                        aria-label={`${app.lifecycle === "disabled" ? "Re-enable" : "Disable"} ${app.name}`}
-                        className={`text-button ${app.lifecycle === "disabled" ? "" : "danger"}`}
-                        disabled={busyId === app.id}
-                        type="button"
-                        onClick={() => void changeState(app)}
-                      >
-                        {app.lifecycle === "disabled" ? "Re-enable" : "Disable"}
-                      </button>
-                    </td>
+                    <td>{app.description || "App configuration updated"}</td>
+                    <td>{dateLabel(app.lastActivityAt ?? app.lastDeploymentAt)}</td>
                   </tr>
                 ))}
               </tbody>

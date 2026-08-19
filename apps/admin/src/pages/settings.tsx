@@ -20,7 +20,6 @@ export function SettingsPage() {
       await controlApi.updateBranding({
         displayName: formString(form, "displayName"),
         primaryColor: formString(form, "primaryColor"),
-        designGuidance: formString(form, "designGuidance"),
       });
       setMessage("Branding saved.");
       state.reload();
@@ -32,9 +31,8 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Organization"
         title="Settings"
-        description="Define the identity and design context agents receive when they build internal tools."
+        description="Manage your organization name, logo, and brand color."
       />
       {state.status === "loading" ? <LoadingState label="Loading settings" /> : null}
       {state.status === "error" ? <ErrorState error={state.error} retry={state.reload} /> : null}
@@ -43,7 +41,7 @@ export function SettingsPage() {
           <div className="settings-section">
             <div>
               <h2>Organization identity</h2>
-              <p>These values are exposed as normalized branding context through MCP.</p>
+              <p>These details are used consistently across your internal apps.</p>
             </div>
             <div className="form-stack">
               <label>
@@ -81,15 +79,6 @@ export function SettingsPage() {
                     defaultValue={state.data.branding.primaryColor}
                   />
                 </span>
-              </label>
-              <label>
-                Design guidance
-                <textarea
-                  name="designGuidance"
-                  rows={6}
-                  defaultValue={state.data.branding.designGuidance}
-                  placeholder="Use concise labels, compact tables, and the company tone of voice."
-                />
               </label>
             </div>
           </div>
