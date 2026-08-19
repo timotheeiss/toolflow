@@ -34,12 +34,14 @@ export default async function handler(request: Request): Promise<Response> {
   const factory = serviceFactories[host as keyof typeof serviceFactories];
   if (!factory) return new Response("Unknown Toolflow service.", { status: 404, headers: corsHeaders(request) });
 
-  // Public service URLs do not include Vercel's internal /api route. The rewrite
-  // below adds it only to select the function, so remove it before Hono matches
-  // the request path.
+  // The Vercel route passes the public path as an internal query parameter so
+  // one concrete function can serve every public API path.
   const url = new URL(request.url);
-  if (url.pathname === "/api") url.pathname = "/";
-  else if (url.pathname.startsWith("/api/")) url.pathname = url.pathname.slice(4);
+  const toolflowPath = url.searchParams.get("__toolflow_path");
+  if (toolflowPath !== null) {
+    url.pathname = `/${toolflowPath}`;
+    url.searchParams.delete("__toolflow_path");
+  }
   try {
     let service = services.get(host);
     if (!service) {

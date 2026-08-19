@@ -4,10 +4,9 @@
   "outputDirectory": "public",
   "regions": ["cdg1"],
   "functions": {
-    "api/index.ts": { "maxDuration": 60 },
-    "api/[...path].ts": { "maxDuration": 60 }
+    "api/index.ts": { "maxDuration": 60 }
   },
   "routes": [
-    { "src": "/(.*)", "dest": "/api/$1" }
+    { "src": "/(?<toolflowPath>.*)", "dest": "/api/index.ts?__toolflow_path=$toolflowPath" }
   ]
 }
