@@ -69,11 +69,30 @@ const runtimePackages = [
   "react-dom",
   "typescript",
 ] as const;
-const vitestCli = fileURLToPath(new URL("../node_modules/vitest/vitest.mjs", import.meta.url));
+// Vitest resolves its pool entry points dynamically, so serverless file tracers
+// cannot discover them from the CLI import graph. Keep every entry used by the
+// fixed forks pool as an explicit URL relative to this package. These values are
+// also checked before spawning Vitest so an incomplete deployment is reported as
+// a Toolflow runtime defect instead of as a customer test failure.
+const vitestRuntime = {
+  cli: fileURLToPath(new URL("../node_modules/vitest/vitest.mjs", import.meta.url)),
+  worker: fileURLToPath(new URL("../node_modules/vitest/dist/worker.js", import.meta.url)),
+  forksWorker: fileURLToPath(
+    new URL("../node_modules/vitest/dist/workers/forks.js", import.meta.url),
+  ),
+} as const;
 const runtimeTypePackageRoots = new Map([
-  ["@types/react", dirname(fileURLToPath(new URL("../node_modules/@types/react/package.json", import.meta.url)))],
-  ["@types/react-dom", dirname(fileURLToPath(new URL("../node_modules/@types/react-dom/package.json", import.meta.url)))],
-  ["vitest", dirname(vitestCli)],
+  [
+    "@types/react",
+    dirname(fileURLToPath(new URL("../node_modules/@types/react/package.json", import.meta.url))),
+  ],
+  [
+    "@types/react-dom",
+    dirname(
+      fileURLToPath(new URL("../node_modules/@types/react-dom/package.json", import.meta.url)),
+    ),
+  ],
+  ["vitest", dirname(vitestRuntime.cli)],
 ] as const);
 // Resolve every package independently. Serverless providers trace and relocate
 // application files, so inferring one shared node_modules directory from the
@@ -124,7 +143,7 @@ export async function compileSource(
     if (typeDiagnostics.length) {
       return { artifact: null, artifactHash: null, diagnostics: typeDiagnostics };
     }
-    const testDiagnostics = await runUnitTests(directory, vitestCli);
+    const testDiagnostics = await runUnitTests(directory, vitestRuntime);
     if (testDiagnostics.length) {
       return { artifact: null, artifactHash: null, diagnostics: testDiagnostics };
     }
@@ -279,14 +298,30 @@ async function linkRuntimePackages(
   }
 }
 
-async function runUnitTests(directory: string, vitestCli: string): Promise<BuildDiagnostic[]> {
+async function runUnitTests(
+  directory: string,
+  runtime: typeof vitestRuntime,
+): Promise<BuildDiagnostic[]> {
+  const missingRuntimeFiles = Object.values(runtime).filter((path) => !existsSync(path));
+  if (missingRuntimeFiles.length > 0) {
+    return [
+      {
+        phase: "test",
+        code: "TEST_RUNTIME_INCOMPLETE",
+        message: `The Toolflow test runtime is missing: ${missingRuntimeFiles.join(", ")}`,
+        remediation: "Redeploy the Toolflow build service with the complete test runtime.",
+      },
+    ];
+  }
   try {
     await execFileAsync(
       process.execPath,
       [
-        vitestCli,
+        runtime.cli,
         "run",
         "--passWithNoTests",
+        "--pool=forks",
+        "--poolOptions.forks.singleFork=true",
         "--maxWorkers=1",
         "--minWorkers=1",
       ],
