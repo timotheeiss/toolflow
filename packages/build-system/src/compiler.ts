@@ -19,6 +19,8 @@ import { forbiddenSourceConstructs, manifestPath } from "@toolflow/app-template"
 // serverless function bundle.
 import "@toolflow/app-sdk";
 import "@toolflow/components";
+import "react-dom";
+import "react-dom/client";
 import ts from "typescript";
 
 export interface BuildDiagnostic {
