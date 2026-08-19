@@ -4,7 +4,7 @@ import { createBuildRunnerApplication } from "../../build-worker/src/bootstrap.j
 export const maxDuration = 60;
 const app = createBuildRunnerApplication().app;
 
-export default function handler(request: Request): Promise<Response> {
+export function handleFetchRequest(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const toolflowPath = url.searchParams.get("__toolflow_path");
   if (toolflowPath !== null) {
@@ -13,3 +13,5 @@ export default function handler(request: Request): Promise<Response> {
   }
   return app.fetch(new Request(url, request));
 }
+
+export default handleFetchRequest;

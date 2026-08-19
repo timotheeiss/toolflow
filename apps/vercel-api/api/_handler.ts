@@ -29,7 +29,7 @@ function corsHeaders(request: Request): HeadersInit {
   };
 }
 
-export default async function handler(request: Request): Promise<Response> {
+export async function handleFetchRequest(request: Request): Promise<Response> {
   const host = new URL(request.url).hostname.toLowerCase();
   const factory = serviceFactories[host as keyof typeof serviceFactories];
   if (!factory) return new Response("Unknown Toolflow service.", { status: 404, headers: corsHeaders(request) });
@@ -58,3 +58,5 @@ export default async function handler(request: Request): Promise<Response> {
     });
   }
 }
+
+export default handleFetchRequest;
