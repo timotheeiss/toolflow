@@ -7,8 +7,7 @@
     "api/index.ts": { "maxDuration": 60 },
     "api/[...path].ts": { "maxDuration": 60 }
   },
-  "rewrites": [
-    { "source": "/", "destination": "/api" },
-    { "source": "/:path*", "destination": "/api/:path*" }
+  "routes": [
+    { "src": "/(.*)", "dest": "/api/$1" }
   ]
 }
