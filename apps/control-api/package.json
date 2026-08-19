@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.1",
+    "@hono/node-server": "^2.1.1",
     "@toolflow/audit": "workspace:*",
     "@toolflow/auth": "workspace:*",
     "@toolflow/contracts": "workspace:*",
