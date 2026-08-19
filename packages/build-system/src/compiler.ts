@@ -22,6 +22,7 @@ import "@toolflow/components";
 import "react-dom";
 import "react-dom/client";
 import ts from "typescript";
+import "vitest";
 
 export interface BuildDiagnostic {
   phase: "manifest" | "policy" | "typecheck" | "bundle" | "test";
