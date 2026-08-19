@@ -1,6 +1,5 @@
 import type { Principal, RequestAuthenticator } from "@toolflow/auth";
-import { organizationMemberships, users, type ToolflowDatabase } from "@toolflow/database";
-import { and, eq } from "drizzle-orm";
+import { and, eq, organizationMemberships, users, type ToolflowDatabase } from "@toolflow/database";
 
 export class DevelopmentRuntimeAuthenticator implements RequestAuthenticator {
   constructor(

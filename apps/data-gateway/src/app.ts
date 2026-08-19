@@ -17,11 +17,12 @@ import {
   organizationMemberships,
   schemaVersions,
   usageEvents,
+  and,
+  eq,
   type ToolflowDatabase,
 } from "@toolflow/database";
 import type { RuntimeContext, RuntimeContextSigner } from "@toolflow/runtime-context";
 import type { SecretVault } from "@toolflow/secrets";
-import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Pool, PoolClient } from "pg";
 import { Client } from "pg";
@@ -375,7 +376,7 @@ async function externalRead(
 }
 
 function parseConnectionConfig(value: unknown): ConnectionConfiguration {
-  return z
+  const parsed = z
     .object({
       host: z.string(),
       port: z.number().int(),
@@ -390,6 +391,19 @@ function parseConnectionConfig(value: unknown): ConnectionConfiguration {
       ),
     })
     .parse(value);
+  // Keep this explicit after Zod validation so the contract remains stable for
+  // both TypeScript's strict project build and Vercel's function bundler.
+  if (
+    parsed.host === undefined ||
+    parsed.port === undefined ||
+    parsed.database === undefined ||
+    parsed.username === undefined ||
+    parsed.tlsMode === undefined ||
+    parsed.approvedTables === undefined
+  ) {
+    throw new GatewayError(422, "INVALID_CONNECTION", "Connection configuration is incomplete.");
+  }
+  return parsed;
 }
 
 type AppTable = AppManifest["schema"]["tables"][number];

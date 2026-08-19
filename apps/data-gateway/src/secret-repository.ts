@@ -1,6 +1,5 @@
-import { secretEnvelopes, type ToolflowDatabase } from "@toolflow/database";
+import { and, eq, secretEnvelopes, type ToolflowDatabase } from "@toolflow/database";
 import type { SecretEnvelope, SecretEnvelopeRepository } from "@toolflow/secrets";
-import { and, eq } from "drizzle-orm";
 
 export class DatabaseSecretEnvelopeRepository implements SecretEnvelopeRepository {
   constructor(private readonly database: ToolflowDatabase["db"]) {}

@@ -3,9 +3,10 @@ import {
   organizationMemberships,
   organizations,
   users,
+  and,
+  eq,
   type ToolflowDatabase,
 } from "@toolflow/database";
-import { and, eq } from "drizzle-orm";
 
 export class DatabaseMembershipIdentityRepository implements MembershipIdentityRepository {
   constructor(private readonly database: ToolflowDatabase["db"]) {}

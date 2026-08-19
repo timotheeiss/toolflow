@@ -40,7 +40,20 @@ export function createDeploymentWorker(provider: DeploymentProvider, serviceToke
       return context.json({ code: "PAYLOAD_TOO_LARGE", message: "Artifact exceeds 8 MB." }, 413);
     }
     const input = publishInput.parse(JSON.parse(raw));
-    const artifact: ToolflowArtifact = input.artifact;
+    const parsedArtifact = input.artifact;
+    if (
+      parsedArtifact.version === undefined ||
+      parsedArtifact.sourceHash === undefined ||
+      parsedArtifact.runtimeVersion === undefined ||
+      parsedArtifact.manifest === undefined ||
+      parsedArtifact.html === undefined ||
+      parsedArtifact.clientJavaScript === undefined ||
+      parsedArtifact.clientCss === undefined ||
+      parsedArtifact.serverJavaScript === undefined
+    ) {
+      return context.json({ code: "VALIDATION_FAILED", message: "Artifact is incomplete." }, 422);
+    }
+    const artifact: ToolflowArtifact = parsedArtifact;
     const calculatedHash = createHash("sha256").update(stableJson(artifact)).digest("hex");
     if (calculatedHash !== input.artifactHash) {
       return context.json(

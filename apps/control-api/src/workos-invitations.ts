@@ -1,5 +1,4 @@
-import { organizations, type ToolflowDatabase } from "@toolflow/database";
-import { eq } from "drizzle-orm";
+import { eq, organizations, type ToolflowDatabase } from "@toolflow/database";
 
 interface WorkOsInvitationClient {
   userManagement: {
