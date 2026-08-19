@@ -2,6 +2,7 @@ import { getTableColumns, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
   apps,
+  appRoutes,
   auditEvents,
   dataConnections,
   deployments,
@@ -33,9 +34,11 @@ describe("control-plane schema", () => {
     }
   });
 
-  it("stores preview and production URLs on each app", () => {
-    const columns = getTableColumns(apps);
-    expect(columns.previewUrl.name).toBe("preview_url");
-    expect(columns.productionUrl.name).toBe("production_url");
+  it("stores the canonical URL on each app route", () => {
+    const routeColumns = getTableColumns(appRoutes);
+    const appColumns = getTableColumns(apps);
+    expect(routeColumns.url.name).toBe("url");
+    expect(appColumns).not.toHaveProperty("previewUrl");
+    expect(appColumns).not.toHaveProperty("productionUrl");
   });
 });

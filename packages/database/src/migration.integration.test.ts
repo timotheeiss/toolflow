@@ -53,12 +53,10 @@ describe("initial control-plane migration", () => {
     expect(deploymentColumns.rows.map((row) => row.column_name)).not.toContain(
       "approval_request_id",
     );
-    const appColumns = await client.query<{ column_name: string }>(
-      "select column_name from information_schema.columns where table_schema = 'public' and table_name = 'apps'",
+    const urlColumns = await client.query<{ table_name: string; column_name: string }>(
+      "select table_name, column_name from information_schema.columns where table_schema = 'public' and ((table_name = 'app_routes' and column_name = 'url') or (table_name = 'apps' and column_name in ('preview_url', 'production_url'))) order by table_name, column_name",
     );
-    expect(appColumns.rows.map((row) => row.column_name)).toEqual(
-      expect.arrayContaining(["preview_url", "production_url"]),
-    );
+    expect(urlColumns.rows).toEqual([{ table_name: "app_routes", column_name: "url" }]);
   });
 
   it("atomically shares hashed rate-limit buckets across service instances", async () => {

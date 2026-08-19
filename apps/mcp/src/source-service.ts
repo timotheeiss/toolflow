@@ -207,6 +207,7 @@ export class ToolflowSourceService {
             .select({
               environment: activeDeployments.environment,
               routeKey: appRoutes.routeKey,
+              url: appRoutes.url,
             })
             .from(activeDeployments)
             .innerJoin(
@@ -220,13 +221,16 @@ export class ToolflowSourceService {
         ]);
         const routeUrl = (environment: "preview" | "production") => {
           const route = routes.find((candidate) => candidate.environment === environment);
-          return route
-            ? runtimeAppUrl(this.runtimeBaseUrl, route.routeKey, {
-                organizationId: principal.organizationId,
-                appSlug: app.slug,
-                environment,
-              })
-            : null;
+          return (
+            route?.url ??
+            (route
+              ? runtimeAppUrl(this.runtimeBaseUrl, route.routeKey, {
+                  organizationId: principal.organizationId,
+                  appSlug: app.slug,
+                  environment,
+                })
+              : null)
+          );
         };
         return {
           id: app.id,
@@ -235,8 +239,8 @@ export class ToolflowSourceService {
           description: app.description,
           lifecycle: app.lifecycle,
           owners,
-          previewUrl: app.previewUrl ?? routeUrl("preview"),
-          productionUrl: app.productionUrl ?? routeUrl("production"),
+          previewUrl: routeUrl("preview"),
+          productionUrl: routeUrl("production"),
           lastDeploymentAt: latestDeployment[0]?.completedAt?.toISOString() ?? null,
           updatedAt: app.updatedAt.toISOString(),
         };
@@ -408,6 +412,8 @@ export class ToolflowSourceService {
     );
     const prepared = this.prepareBundle(files);
     const sourceVersionId = crypto.randomUUID();
+    const previewRouteKey = crypto.randomUUID();
+    const productionRouteKey = crypto.randomUUID();
     const objectKey = `sources/${principal.organizationId}/${appId}/${prepared.contentHash}.json`;
     await this.objects.put(objectKey, prepared.bytes);
     const result = await this.database.transaction(async (transaction) => {
@@ -441,14 +447,26 @@ export class ToolflowSourceService {
       ]);
       await transaction.insert(appRoutes).values([
         {
+          routeKey: previewRouteKey,
           organizationId: principal.organizationId,
           appId,
           environment: "preview",
+          url: runtimeAppUrl(this.runtimeBaseUrl, previewRouteKey, {
+            organizationId: principal.organizationId,
+            appSlug: input.slug,
+            environment: "preview",
+          }),
         },
         {
+          routeKey: productionRouteKey,
           organizationId: principal.organizationId,
           appId,
           environment: "production",
+          url: runtimeAppUrl(this.runtimeBaseUrl, productionRouteKey, {
+            organizationId: principal.organizationId,
+            appSlug: input.slug,
+            environment: "production",
+          }),
         },
       ]);
       await transaction.insert(sourceVersions).values({

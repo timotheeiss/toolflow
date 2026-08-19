@@ -859,7 +859,11 @@ export class DatabaseGovernanceStore implements GovernanceStore {
         .from(usageEvents)
         .where(eq(usageEvents.appId, app.id)),
       this.database
-        .select({ environment: appRoutes.environment, routeKey: appRoutes.routeKey })
+        .select({
+          environment: appRoutes.environment,
+          routeKey: appRoutes.routeKey,
+          url: appRoutes.url,
+        })
         .from(activeDeployments)
         .innerJoin(
           appRoutes,
@@ -873,13 +877,16 @@ export class DatabaseGovernanceStore implements GovernanceStore {
     const deployment = active[0]?.deployment;
     const routeUrl = (environment: "preview" | "production") => {
       const route = routes.find((candidate) => candidate.environment === environment);
-      return route
-        ? runtimeAppUrl(this.runtimeBaseUrl, route.routeKey, {
-            organizationId: app.organizationId,
-            appSlug: app.slug,
-            environment,
-          })
-        : null;
+      return (
+        route?.url ??
+        (route
+          ? runtimeAppUrl(this.runtimeBaseUrl, route.routeKey, {
+              organizationId: app.organizationId,
+              appSlug: app.slug,
+              environment,
+            })
+          : null)
+      );
     };
     return {
       id: app.id,
@@ -889,8 +896,8 @@ export class DatabaseGovernanceStore implements GovernanceStore {
       lifecycle: app.lifecycle,
       ownerNames: owners.map((owner) => owner.name),
       activeVersion: active[0]?.source.id ?? null,
-      previewUrl: app.previewUrl ?? routeUrl("preview"),
-      productionUrl: app.productionUrl ?? routeUrl("production"),
+      previewUrl: routeUrl("preview"),
+      productionUrl: routeUrl("production"),
       lastDeploymentAt: deployment?.completedAt?.toISOString() ?? null,
       memberCount: Number(memberCount[0]?.value ?? 0),
       lastActivityAt: lastUsage[0]?.occurredAt?.toISOString() ?? null,

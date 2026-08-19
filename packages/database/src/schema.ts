@@ -125,8 +125,6 @@ export const apps = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     lifecycle: appLifecycle("lifecycle").notNull().default("draft"),
-    previewUrl: text("preview_url"),
-    productionUrl: text("production_url"),
     disabledReason: text("disabled_reason"),
     ...timestamps,
   },
@@ -147,6 +145,7 @@ export const appRoutes = pgTable(
       .notNull()
       .references(() => apps.id, { onDelete: "cascade" }),
     environment: environment("environment").notNull(),
+    url: text("url"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

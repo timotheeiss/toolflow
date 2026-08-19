@@ -141,8 +141,12 @@ export class ProductionDeploymentService {
         }
         await transaction
           .update(apps)
-          .set({ lifecycle: "production", productionUrl, updatedAt: completedAt })
+          .set({ lifecycle: "production", updatedAt: completedAt })
           .where(and(eq(apps.id, input.appId), eq(apps.organizationId, principal.organizationId)));
+        await transaction
+          .update(appRoutes)
+          .set({ url: productionUrl })
+          .where(and(eq(appRoutes.appId, input.appId), eq(appRoutes.environment, "production")));
       });
     } catch (error) {
       await this.database
@@ -320,9 +324,9 @@ export class ProductionDeploymentService {
           );
         }
         await transaction
-          .update(apps)
-          .set({ productionUrl, updatedAt: completedAt })
-          .where(and(eq(apps.id, input.appId), eq(apps.organizationId, principal.organizationId)));
+          .update(appRoutes)
+          .set({ url: productionUrl })
+          .where(and(eq(appRoutes.appId, input.appId), eq(appRoutes.environment, "production")));
       });
     } catch (error) {
       await this.database

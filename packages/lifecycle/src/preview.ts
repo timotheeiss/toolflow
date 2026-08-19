@@ -193,10 +193,13 @@ export class DeploymentService {
           .update(apps)
           .set({
             lifecycle: row.app.lifecycle === "production" ? "production" : "preview",
-            previewUrl,
             updatedAt: completedAt,
           })
           .where(and(eq(apps.organizationId, principal.organizationId), eq(apps.id, input.appId)));
+        await transaction
+          .update(appRoutes)
+          .set({ url: previewUrl })
+          .where(and(eq(appRoutes.appId, input.appId), eq(appRoutes.environment, "preview")));
       });
     } catch (error) {
       await this.database
