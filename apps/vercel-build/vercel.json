@@ -6,7 +6,7 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 60,
-      "includeFiles": "../../packages/build-system/node_modules/**"
+      "includeFiles": "../../{packages/build-system/node_modules/**,node_modules/.pnpm/vitest@*/node_modules/vitest/**}"
     }
   },
   "routes": [
