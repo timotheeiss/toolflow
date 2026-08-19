@@ -1,3 +1,6 @@
+// Harmless bundle marker used to verify the GitHub-to-Cloudflare deployment pipeline.
+export const runtimeBuildMarker = "github-deployment-test-2026-08-19";
+
 export interface ServiceBinding {
   fetch(request: Request): Promise<Response>;
 }
