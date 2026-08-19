@@ -35,7 +35,7 @@
     "TOOLFLOW_AUTHORIZATION_ORIGIN": "https://runtime-auth.toolflow.space",
     "TOOLFLOW_APP_BASE_HOST": "apps.toolflow.space",
     "TOOLFLOW_DATA_GATEWAY_ORIGIN": "https://data.toolflow.space",
-    "TOOLFLOW_RUNTIME_CPU_MS": "50",
+    "TOOLFLOW_RUNTIME_CPU_MS": "10",
     "TOOLFLOW_RUNTIME_SUBREQUESTS": "10",
     "TOOLFLOW_RUNTIME_MAX_RESPONSE_BYTES": "8388608",
     "TOOLFLOW_RUNTIME_MAX_DURATION_MS": "30000"

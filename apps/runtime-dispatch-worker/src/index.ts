@@ -183,13 +183,9 @@ async function internalHealth(
     return new Response(null, { status: 422 });
   }
   try {
-    const worker = environment.TOOLFLOW_USER_WORKERS.get(
-      scriptName,
-      {},
-      {
-        limits: { cpuMs: 50, subRequests: 1 },
-      },
-    );
+    // The authenticated probe is handled by the platform wrapper before app code.
+    // Avoid plan-dependent custom limits and outbound parameters for this invocation.
+    const worker = environment.TOOLFLOW_USER_WORKERS.get(scriptName);
     const response = await worker.fetch(
       new Request("https://toolflow.internal/api/health", {
         headers: { "x-toolflow-health-probe": "true" },
@@ -249,11 +245,31 @@ function healthFailure(
   message: string,
   cause?: unknown,
 ): Response {
-  console.error("User Worker health probe failed.", { code, scriptName, cause });
+  console.error("User Worker health probe failed.", {
+    code,
+    scriptName,
+    cause: errorDiagnostic(cause),
+  });
   return Response.json(
     { code, message },
     { status: 502, headers: { "cache-control": "no-store" } },
   );
+}
+
+function errorDiagnostic(error: unknown): Record<string, unknown> | null {
+  if (error === undefined) return null;
+  const diagnostic: Record<string, unknown> = { summary: String(error) };
+  if (error && typeof error === "object") {
+    for (const key of ["name", "message", "code", "stack"] as const) {
+      try {
+        const value = (error as Record<string, unknown>)[key];
+        if (typeof value === "string" || typeof value === "number") diagnostic[key] = value;
+      } catch {
+        // Some runtime exception properties can throw while being inspected.
+      }
+    }
+  }
+  return diagnostic;
 }
 
 async function authorize(
@@ -445,7 +461,7 @@ interface RuntimeLimits {
 
 function runtimeLimits(environment: DispatchEnvironment): RuntimeLimits {
   return {
-    cpuMs: boundedInteger(environment.TOOLFLOW_RUNTIME_CPU_MS, 50, 10, 100),
+    cpuMs: boundedInteger(environment.TOOLFLOW_RUNTIME_CPU_MS, 10, 10, 100),
     subRequests: boundedInteger(environment.TOOLFLOW_RUNTIME_SUBREQUESTS, 10, 1, 50),
     maximumResponseBytes: boundedInteger(
       environment.TOOLFLOW_RUNTIME_MAX_RESPONSE_BYTES,

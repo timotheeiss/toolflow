@@ -73,7 +73,7 @@ describe("production dispatch worker", () => {
     expect(fixture.get).toHaveBeenCalledOnce();
     const dispatchCall = fixture.get.mock.calls[0];
     expect(dispatchCall?.[0]).toBe(grant.scriptName);
-    expect(dispatchCall?.[2]?.limits).toEqual({ cpuMs: 50, subRequests: 10 });
+    expect(dispatchCall?.[2]?.limits).toEqual({ cpuMs: 10, subRequests: 10 });
     expect(dispatchCall?.[2]?.outbound?.TOOLFLOW_RUNTIME_CONTEXT_TOKEN).toBe(
       grant.runtimeContextToken,
     );
@@ -189,6 +189,7 @@ describe("production dispatch worker", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ health: "passed", scriptName: grant.scriptName });
+    expect(fixture.get).toHaveBeenCalledWith(grant.scriptName);
   });
 
   it("distinguishes a missing namespaced Worker from an app health failure", async () => {
@@ -209,7 +210,13 @@ describe("production dispatch worker", () => {
     );
     expect(response.status).toBe(502);
     expect(await response.json()).toMatchObject({ code: "USER_WORKER_NOT_FOUND" });
-    expect(report).toHaveBeenCalledOnce();
+    expect(report).toHaveBeenCalledWith(
+      "User Worker health probe failed.",
+      expect.objectContaining({
+        code: "USER_WORKER_NOT_FOUND",
+        cause: expect.objectContaining({ message: "Worker not found in namespace" }),
+      }),
+    );
     report.mockRestore();
   });
 
