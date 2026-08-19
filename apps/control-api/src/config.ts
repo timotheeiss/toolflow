@@ -7,6 +7,7 @@ const baseConfigSchema = z.object({
   DATABASE_URL: z.string().url(),
   TOOLFLOW_AUTH_MODE: z.enum(["development", "oidc"]).default("development"),
   TOOLFLOW_ADMIN_ORIGIN: z.string().url().default("http://127.0.0.1:5173"),
+  TOOLFLOW_RUNTIME_BASE_URL: z.string().url().default("http://127.0.0.1:3004"),
   TOOLFLOW_OBJECT_STORE_PATH: z.string().default(".toolflow/objects"),
   TOOLFLOW_ALLOW_INSECURE_DATABASE_TLS: z.coerce.boolean().default(false),
   TOOLFLOW_SECRET_ENCRYPTION_KEY: z
@@ -26,7 +27,10 @@ const baseConfigSchema = z.object({
   WORKOS_API_KEY: z.string().min(1).optional(),
   WORKOS_CLIENT_ID: z.string().min(1).optional(),
   WORKOS_COOKIE_PASSWORD: z.string().min(32).optional(),
-  TOOLFLOW_COOKIE_DOMAIN: z.string().regex(/^\.[a-z0-9.-]+$/i).optional(),
+  TOOLFLOW_COOKIE_DOMAIN: z
+    .string()
+    .regex(/^\.[a-z0-9.-]+$/i)
+    .optional(),
   WORKOS_REDIRECT_URI: z.string().url().default("http://127.0.0.1:3000/auth/callback"),
 });
 

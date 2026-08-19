@@ -22,6 +22,7 @@ export const appSummarySchema = z.object({
   description: z.string().max(2_000),
   lifecycle: appLifecycleSchema,
   ownerIds: z.array(idSchema).min(1),
+  previewUrl: z.string().url().nullable(),
   productionUrl: z.string().url().nullable(),
   lastDeploymentAt: z.string().datetime().nullable(),
 });

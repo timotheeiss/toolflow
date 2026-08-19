@@ -32,4 +32,10 @@ describe("control-plane schema", () => {
       expect(organizationId?.notNull).toBe(true);
     }
   });
+
+  it("stores preview and production URLs on each app", () => {
+    const columns = getTableColumns(apps);
+    expect(columns.previewUrl.name).toBe("preview_url");
+    expect(columns.productionUrl.name).toBe("production_url");
+  });
 });

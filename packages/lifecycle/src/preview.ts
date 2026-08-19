@@ -157,6 +157,7 @@ export class DeploymentService {
       .returning();
     if (!deployment) throw new Error("Preview deployment creation did not return a record.");
     const completedAt = new Date();
+    const previewUrl = this.appUrl(row.app.slug, "preview", row.routeKey, principal.organizationId);
     try {
       const published = await this.publisher.publish({
         deploymentId: deployment.id,
@@ -192,6 +193,7 @@ export class DeploymentService {
           .update(apps)
           .set({
             lifecycle: row.app.lifecycle === "production" ? "production" : "preview",
+            previewUrl,
             updatedAt: completedAt,
           })
           .where(and(eq(apps.organizationId, principal.organizationId), eq(apps.id, input.appId)));
@@ -215,7 +217,7 @@ export class DeploymentService {
       appId: input.appId,
       environment: "preview",
       status: "succeeded",
-      url: this.appUrl(row.app.slug, "preview", row.routeKey, principal.organizationId),
+      url: previewUrl,
       artifactHash: row.build.artifactHash,
       sourceVersionId: row.build.sourceVersionId,
       createdAt: completedAt.toISOString(),

@@ -189,7 +189,7 @@ export class ToolflowSourceService {
       .offset(offset);
     return Promise.all(
       rows.map(async (app) => {
-        const [owners, latestDeployment, production] = await Promise.all([
+        const [owners, latestDeployment, routes] = await Promise.all([
           this.database
             .select({ membershipId: appOwners.membershipId, name: users.name })
             .from(appOwners)
@@ -205,7 +205,7 @@ export class ToolflowSourceService {
             .where(and(eq(deployments.appId, app.id), eq(deployments.status, "succeeded"))),
           this.database
             .select({
-              deploymentId: activeDeployments.deploymentId,
+              environment: activeDeployments.environment,
               routeKey: appRoutes.routeKey,
             })
             .from(activeDeployments)
@@ -213,17 +213,21 @@ export class ToolflowSourceService {
               appRoutes,
               and(
                 eq(appRoutes.appId, activeDeployments.appId),
-                eq(appRoutes.environment, "production"),
+                eq(appRoutes.environment, activeDeployments.environment),
               ),
             )
-            .where(
-              and(
-                eq(activeDeployments.appId, app.id),
-                eq(activeDeployments.environment, "production"),
-              ),
-            )
-            .limit(1),
+            .where(eq(activeDeployments.appId, app.id)),
         ]);
+        const routeUrl = (environment: "preview" | "production") => {
+          const route = routes.find((candidate) => candidate.environment === environment);
+          return route
+            ? runtimeAppUrl(this.runtimeBaseUrl, route.routeKey, {
+                organizationId: principal.organizationId,
+                appSlug: app.slug,
+                environment,
+              })
+            : null;
+        };
         return {
           id: app.id,
           slug: app.slug,
@@ -231,13 +235,8 @@ export class ToolflowSourceService {
           description: app.description,
           lifecycle: app.lifecycle,
           owners,
-          productionUrl: production[0]
-            ? runtimeAppUrl(this.runtimeBaseUrl, production[0].routeKey, {
-                organizationId: principal.organizationId,
-                appSlug: app.slug,
-                environment: "production",
-              })
-            : null,
+          previewUrl: app.previewUrl ?? routeUrl("preview"),
+          productionUrl: app.productionUrl ?? routeUrl("production"),
           lastDeploymentAt: latestDeployment[0]?.completedAt?.toISOString() ?? null,
           updatedAt: app.updatedAt.toISOString(),
         };

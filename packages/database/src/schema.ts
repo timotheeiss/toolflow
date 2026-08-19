@@ -125,6 +125,8 @@ export const apps = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     lifecycle: appLifecycle("lifecycle").notNull().default("draft"),
+    previewUrl: text("preview_url"),
+    productionUrl: text("production_url"),
     disabledReason: text("disabled_reason"),
     ...timestamps,
   },

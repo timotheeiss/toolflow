@@ -21,6 +21,7 @@ import {
   activeDeployments,
   appMembers,
   appOwners,
+  appRoutes,
   apps,
   auditEvents,
   builds,
@@ -33,6 +34,7 @@ import {
   sourceVersions,
   usageEvents,
   users,
+  runtimeAppUrl,
   and,
   count,
   desc,
@@ -130,6 +132,7 @@ export class DatabaseGovernanceStore implements GovernanceStore {
     private readonly vault: SecretVault,
     private readonly inspector: ConnectionInspector,
     private readonly allowInsecureTls = false,
+    private readonly runtimeBaseUrl = "https://apps.toolflow.internal",
   ) {}
 
   async getOverview(organizationId: string): Promise<OverviewMetrics> {
@@ -834,7 +837,7 @@ export class DatabaseGovernanceStore implements GovernanceStore {
   }
 
   private async appSummary(app: typeof apps.$inferSelect): Promise<AdminAppSummary> {
-    const [owners, memberCount, active, lastUsage] = await Promise.all([
+    const [owners, memberCount, active, lastUsage, routes] = await Promise.all([
       this.database
         .select({ name: users.name })
         .from(appOwners)
@@ -855,8 +858,29 @@ export class DatabaseGovernanceStore implements GovernanceStore {
         .select({ occurredAt: max(usageEvents.occurredAt) })
         .from(usageEvents)
         .where(eq(usageEvents.appId, app.id)),
+      this.database
+        .select({ environment: appRoutes.environment, routeKey: appRoutes.routeKey })
+        .from(activeDeployments)
+        .innerJoin(
+          appRoutes,
+          and(
+            eq(appRoutes.appId, activeDeployments.appId),
+            eq(appRoutes.environment, activeDeployments.environment),
+          ),
+        )
+        .where(eq(activeDeployments.appId, app.id)),
     ]);
     const deployment = active[0]?.deployment;
+    const routeUrl = (environment: "preview" | "production") => {
+      const route = routes.find((candidate) => candidate.environment === environment);
+      return route
+        ? runtimeAppUrl(this.runtimeBaseUrl, route.routeKey, {
+            organizationId: app.organizationId,
+            appSlug: app.slug,
+            environment,
+          })
+        : null;
+    };
     return {
       id: app.id,
       slug: app.slug,
@@ -865,6 +889,8 @@ export class DatabaseGovernanceStore implements GovernanceStore {
       lifecycle: app.lifecycle,
       ownerNames: owners.map((owner) => owner.name),
       activeVersion: active[0]?.source.id ?? null,
+      previewUrl: app.previewUrl ?? routeUrl("preview"),
+      productionUrl: app.productionUrl ?? routeUrl("production"),
       lastDeploymentAt: deployment?.completedAt?.toISOString() ?? null,
       memberCount: Number(memberCount[0]?.value ?? 0),
       lastActivityAt: lastUsage[0]?.occurredAt?.toISOString() ?? null,

@@ -14,7 +14,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "generate": "drizzle-kit generate",
-    "migrate": "tsx src/migrate.ts",
+    "migrate": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts",
     "seed": "tsx src/seed.ts",
     "bootstrap:pilot": "tsx src/bootstrap-pilot.ts"
   },

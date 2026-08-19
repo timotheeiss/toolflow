@@ -31,8 +31,17 @@ export function createControlApiApplication(environment: NodeJS.ProcessEnv = pro
   const vault = createSecretVault(
     new DatabaseSecretEnvelopeRepository(database.db),
     config.TOOLFLOW_SECRET_BACKEND === "kms"
-      ? { backend: "kms", brokerUrl: new URL(config.TOOLFLOW_KMS_URL!), serviceToken: config.TOOLFLOW_KMS_SERVICE_TOKEN!, keyId: config.TOOLFLOW_KMS_KEY_ID!, providerName: config.TOOLFLOW_KMS_PROVIDER_NAME }
-      : { backend: "local", encryptionKey: Buffer.from(config.TOOLFLOW_SECRET_ENCRYPTION_KEY, "base64") },
+      ? {
+          backend: "kms",
+          brokerUrl: new URL(config.TOOLFLOW_KMS_URL!),
+          serviceToken: config.TOOLFLOW_KMS_SERVICE_TOKEN!,
+          keyId: config.TOOLFLOW_KMS_KEY_ID!,
+          providerName: config.TOOLFLOW_KMS_PROVIDER_NAME,
+        }
+      : {
+          backend: "local",
+          encryptionKey: Buffer.from(config.TOOLFLOW_SECRET_ENCRYPTION_KEY, "base64"),
+        },
   );
   let authenticator: RequestAuthenticator;
   let authKit: AuthKitController | undefined;
@@ -41,27 +50,57 @@ export function createControlApiApplication(environment: NodeJS.ProcessEnv = pro
     authenticator = new DevelopmentHeaderAuthenticator();
   } else {
     const memberships = new DatabaseMembershipIdentityRepository(database.db);
-    const workos = new WorkOS({ apiKey: config.WORKOS_API_KEY!, clientId: config.WORKOS_CLIENT_ID! });
-    const sessionAuthenticator = new WorkOsSessionAuthenticator(workos, memberships, config.WORKOS_COOKIE_PASSWORD!, {
-      secure: config.NODE_ENV === "production",
-      ...(config.TOOLFLOW_COOKIE_DOMAIN ? { domain: config.TOOLFLOW_COOKIE_DOMAIN } : {}),
+    const workos = new WorkOS({
+      apiKey: config.WORKOS_API_KEY!,
+      clientId: config.WORKOS_CLIENT_ID!,
     });
+    const sessionAuthenticator = new WorkOsSessionAuthenticator(
+      workos,
+      memberships,
+      config.WORKOS_COOKIE_PASSWORD!,
+      {
+        secure: config.NODE_ENV === "production",
+        ...(config.TOOLFLOW_COOKIE_DOMAIN ? { domain: config.TOOLFLOW_COOKIE_DOMAIN } : {}),
+      },
+    );
     authenticator = new CompositeRequestAuthenticator([
       sessionAuthenticator,
-      new BearerRequestAuthenticator(new JwksAccessTokenVerifier({ issuer: config.WORKOS_ISSUER!, audience: config.WORKOS_AUDIENCE!, jwksUrl: config.WORKOS_JWKS_URL! }), memberships),
+      new BearerRequestAuthenticator(
+        new JwksAccessTokenVerifier({
+          issuer: config.WORKOS_ISSUER!,
+          audience: config.WORKOS_AUDIENCE!,
+          jwksUrl: config.WORKOS_JWKS_URL!,
+        }),
+        memberships,
+      ),
     ]);
     authKit = new AuthKitController(workos, database.db, sessionAuthenticator, audit, {
-      clientId: config.WORKOS_CLIENT_ID!, cookiePassword: config.WORKOS_COOKIE_PASSWORD!, redirectUri: config.WORKOS_REDIRECT_URI,
-      applicationUrl: config.TOOLFLOW_ADMIN_ORIGIN, secure: config.NODE_ENV === "production",
+      clientId: config.WORKOS_CLIENT_ID!,
+      cookiePassword: config.WORKOS_COOKIE_PASSWORD!,
+      redirectUri: config.WORKOS_REDIRECT_URI,
+      applicationUrl: config.TOOLFLOW_ADMIN_ORIGIN,
+      secure: config.NODE_ENV === "production",
       ...(config.TOOLFLOW_COOKIE_DOMAIN ? { cookieDomain: config.TOOLFLOW_COOKIE_DOMAIN } : {}),
     });
     invitationSender = new WorkOsInvitationSender(workos, database.db);
   }
   const app = createControlApi({
-    authenticator, audit, adminStore: new DatabaseAdminStore(database.db),
-    governanceStore: new DatabaseGovernanceStore(database.db, vault, new PostgresConnectionInspector(), config.TOOLFLOW_ALLOW_INSECURE_DATABASE_TLS),
+    authenticator,
+    audit,
+    adminStore: new DatabaseAdminStore(database.db),
+    governanceStore: new DatabaseGovernanceStore(
+      database.db,
+      vault,
+      new PostgresConnectionInspector(),
+      config.TOOLFLOW_ALLOW_INSECURE_DATABASE_TLS,
+      config.TOOLFLOW_RUNTIME_BASE_URL,
+    ),
     allowedOrigins: [config.TOOLFLOW_ADMIN_ORIGIN],
-    objects: createConfiguredObjectStore({ filesystemRoot: resolve(workspaceRoot, config.TOOLFLOW_OBJECT_STORE_PATH), environment, production: config.NODE_ENV === "production" }),
+    objects: createConfiguredObjectStore({
+      filesystemRoot: resolve(workspaceRoot, config.TOOLFLOW_OBJECT_STORE_PATH),
+      environment,
+      production: config.NODE_ENV === "production",
+    }),
     rateLimiter: new PostgresRateLimiter(database.pool),
     ...(authKit ? { authKit } : {}),
     ...(invitationSender ? { invitationSender } : {}),

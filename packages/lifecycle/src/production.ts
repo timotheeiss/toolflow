@@ -87,6 +87,11 @@ export class ProductionDeploymentService {
       .returning();
     if (!deployment) throw new Error("Production deployment creation did not return a record.");
     const completedAt = new Date();
+    const productionUrl = runtimeAppUrl(this.runtimeBaseUrl, candidate.routes.production, {
+      organizationId: principal.organizationId,
+      appSlug: candidate.target.app.slug,
+      environment: "production",
+    });
     try {
       const published = await this.publisher.publish({
         deploymentId: deployment.id,
@@ -136,7 +141,7 @@ export class ProductionDeploymentService {
         }
         await transaction
           .update(apps)
-          .set({ lifecycle: "production", updatedAt: completedAt })
+          .set({ lifecycle: "production", productionUrl, updatedAt: completedAt })
           .where(and(eq(apps.id, input.appId), eq(apps.organizationId, principal.organizationId)));
       });
     } catch (error) {
@@ -155,11 +160,7 @@ export class ProductionDeploymentService {
       appId: input.appId,
       environment: "production" as const,
       status: "succeeded" as const,
-      url: runtimeAppUrl(this.runtimeBaseUrl, candidate.routes.production, {
-        organizationId: principal.organizationId,
-        appSlug: candidate.target.app.slug,
-        environment: "production",
-      }),
+      url: productionUrl,
       artifactHash: candidate.target.build.artifactHash!,
       sourceVersionId: candidate.target.build.sourceVersionId,
       schemaPlanId: candidate.plan?.id ?? null,
@@ -277,6 +278,11 @@ export class ProductionDeploymentService {
       .returning();
     if (!rollback) throw new Error("Rollback deployment creation failed.");
     const completedAt = new Date();
+    const productionUrl = runtimeAppUrl(this.runtimeBaseUrl, target.routeKey, {
+      organizationId: principal.organizationId,
+      appSlug: target.app.slug,
+      environment: "production",
+    });
     try {
       const published = await this.publisher.publish({
         deploymentId: rollback.id,
@@ -313,6 +319,10 @@ export class ProductionDeploymentService {
             "Active production changed while rollback was being activated.",
           );
         }
+        await transaction
+          .update(apps)
+          .set({ productionUrl, updatedAt: completedAt })
+          .where(and(eq(apps.id, input.appId), eq(apps.organizationId, principal.organizationId)));
       });
     } catch (error) {
       await this.database
@@ -334,11 +344,7 @@ export class ProductionDeploymentService {
       targetDeploymentId: target.deployment.id,
       reason: input.reason,
       warning: rollbackWarning,
-      url: runtimeAppUrl(this.runtimeBaseUrl, target.routeKey, {
-        organizationId: principal.organizationId,
-        appSlug: target.app.slug,
-        environment: "production",
-      }),
+      url: productionUrl,
       createdAt: completedAt.toISOString(),
     };
     await this.writeIdempotency(principal, "rollback_app", input.idempotencyKey, input, result);

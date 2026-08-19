@@ -126,6 +126,8 @@ export const adminAppSummarySchema = z.object({
   lifecycle: appLifecycleSchema,
   ownerNames: z.array(z.string()),
   activeVersion: z.string().nullable(),
+  previewUrl: z.string().url().nullable(),
+  productionUrl: z.string().url().nullable(),
   lastDeploymentAt: z.string().datetime().nullable(),
   memberCount: z.number().int().nonnegative(),
   lastActivityAt: z.string().datetime().nullable(),
